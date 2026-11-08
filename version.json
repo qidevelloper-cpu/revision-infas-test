@@ -1,0 +1,210 @@
+{
+ "v": "8995e7e309",
+ "date": "2026-10-25",
+ "sig": "614a7d57b369e200e7bd1efc75287a5295ee06a0",
+ "notes": [
+  {
+   "t": "Examens blancs : tous les sujets (aussi S2 : 2025 et S3 : 2026) s'ouvrent en liste à faire défiler"
+  }
+ ],
+ "mats": {
+  "sonu": {
+   "t": "SONU — Soins obstétricaux et néonatals d’urgence",
+   "h": "0c38eb72e51b08b58d537f32eabc8daadf4b7052"
+  },
+  "gyneco": {
+   "t": "Gynéco-Obstétrique",
+   "h": "eef4004fe76f1dccb2df8dc88ebc9ede7fb341a9"
+  },
+  "vih": {
+   "t": "VIH & traitement ARV",
+   "h": "d73db429b969cf64b5b2e4ade244ad767aeb8998"
+  },
+  "pathotrop": {
+   "t": "Pathologies tropicales & maladies infectieuses",
+   "h": "9c705f302ed7f38dca2bdb89d5d9c2fed86e40ca"
+  },
+  "orl": {
+   "t": "ORL — Oto-rhino-laryngologie",
+   "h": "bc84d72fcff20e484f297f3bdce883a97b27bc3b"
+  },
+  "dermato": {
+   "t": "Dermatologie-Vénérologie",
+   "h": "24a4da6cf8dcff347701b08f899657784c4edf50"
+  },
+  "chir": {
+   "t": "Chirurgie ",
+   "h": "318b901d2c73dc7a60704bc0452e8cc9046bcd22"
+  },
+  "endo": {
+   "t": "Endocrinologie & Oncologie",
+   "h": "cc58c4abda2f9150c902b0bf78c71b6cee39ef42"
+  },
+  "xmvkq4zed": {
+   "t": "Correction Nationale 2025 — Examens blancs infirmier",
+   "h": "47e720bf28e275247046c3bf20698c19db4d6a27"
+  },
+  "xmvkq53re": {
+   "t": "Pharmacologie",
+   "h": "7b2cb0688e341bfe06d2debbfb929c056533f97c"
+  },
+  "xmvkq580o": {
+   "t": "SSR · Planification familiale",
+   "h": "9129f94eecfc57e5beef373cca0332fefb8272f4"
+  },
+  "xmvkq5cba": {
+   "t": "Santé infantile",
+   "h": "5417f6d4e43f6a00733fadaa2701eab07b0da154"
+  },
+  "xmvkq5gqn": {
+   "t": "Pédiatrie",
+   "h": "fc8d2cdede205f27a97dacf031d5504891071844"
+  },
+  "xmvkq5l1e": {
+   "t": "Médecine IDE L2 — pathologies",
+   "h": "b000deddf63d30db83d23b21d2202bb92804a312"
+  },
+  "xmvkq5pc5": {
+   "t": "Appareil digestif",
+   "h": "0887cb32a91204aba189de6f955a8c2f2d08bfa5"
+  },
+  "xmvkq5tml": {
+   "t": "Système nerveux",
+   "h": "dfefd0144cc2ac885e50d67b7f286d7a317039d2"
+  },
+  "xmvkq5y0h": {
+   "t": "Ostéologie & Arthrologie",
+   "h": "44fcef9c55e037fef4a2fcfe82e44d610fc8d1b7"
+  },
+  "xmvkq62d4": {
+   "t": "Cytologie, Histologie & Myologie",
+   "h": "698b334b13aeda07ff2f4b58d3de6331cce487c7"
+  },
+  "xmvkq66ok": {
+   "t": "Santé publique",
+   "h": "411bd6acc559c310af06e746af5095fb186bfd0a"
+  },
+  "xprepade": {
+   "t": "Tous les sujets prépa D.E",
+   "h": "6062aad8d5368b6f520739ab23b51737fac1dad0"
+  },
+  "xformules": {
+   "t": "Réviser les formules",
+   "h": "806077a53b56c4e6454feaba55b0578ec062c8b6"
+  },
+  "xmvm9jr75": {
+   "t": "Ophtalmologie",
+   "h": "864477f569d744990ba9ccbbd3a43fd64a031847"
+  },
+  "xpedexo": {
+   "t": "Pédiatrie — Exercices & Corrigés",
+   "h": "405e714fab0a2c0dfb3775e8fdb55a16410948f6"
+  }
+ },
+ "hist": [
+  {
+   "v": "8995e7e309",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Examens blancs : tous les sujets (aussi S2 : 2025 et S3 : 2026) s'ouvrent en liste à faire défiler"
+    }
+   ]
+  },
+  {
+   "v": "b7dace7fd1",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Premium avec ton nom et ton code (sans Google) · Correction nationale : 53 nouveaux sujets S2 : 2025 et S3 : 2026"
+    },
+    {
+     "t": "🔄 Cours mis à jour : Correction Nationale 2025 — Examens blancs infirmier",
+     "m": "xmvkq4zed"
+    }
+   ]
+  },
+  {
+   "v": "9d58a49401",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Correction nationale : nouveaux sujets corrigés S2 : 2025 (Sage-femme) et S3 : 2026 (7 antennes)"
+    }
+   ]
+  },
+  {
+   "v": "f9c18f3781",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Nouvelle calculatrice : modèle de poche (AC, %, ×, ÷, +/-, = orange)"
+    }
+   ]
+  },
+  {
+   "v": "995dc89b2b",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Codes d'activation, sujets Prépa D.E (ordre ou aléatoire), reprise d'un sujet, questions gratuites, images dans les cours, nouvelle calculatrice"
+    }
+   ]
+  },
+  {
+   "v": "f4c871c322",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "✍️ Pédiatrie — Exercices & Corrigés : 779 questions en quiz, 59 fiches et flashcards"
+    },
+    {
+     "t": "🔄 Cours mis à jour : Pédiatrie — Exercices & Corrigés",
+     "m": "xpedexo"
+    }
+   ]
+  },
+  {
+   "v": "3a07caafa9",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "✍️ Nouveau : Pédiatrie — Exercices & Corrigés (779 questions expliquées)"
+    },
+    {
+     "t": "📘 Nouveau cours : Pédiatrie — Exercices & Corrigés",
+     "m": "xpedexo"
+    }
+   ]
+  },
+  {
+   "v": "8909c592fd",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "📷 Signaler une erreur avec une photo"
+    }
+   ]
+  },
+  {
+   "v": "135d2245f1",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "📚 Cours gratuits / Premium mis à jour dès le retour dans l'appli"
+    }
+   ]
+  },
+  {
+   "v": "754f1aeba1",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Paiement Wave : bouton Wave avec montant prérempli"
+    }
+   ]
+  }
+ ],
+ "moteur": 2,
+ "format": 2
+}
