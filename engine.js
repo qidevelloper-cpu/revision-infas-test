@@ -2884,4 +2884,54 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
  const _ax=appExtra;appExtra=function(m,src){const r=_ax.apply(this,arguments);try{if(m&&src&&estExo(src)){r.js+='<script>('+exoPont.toString()+')()<'+'/script>';if(appUiOf(m.id)==='ri')r.css+=exoCss()}}catch(e){}return r};
 })();
 
+/* ======================= RECUEILS DE SUJETS (Correction nationale) : organisés par MATIÈRE → ANTENNE → ANNÉE =======================
+   Ce cours n'est pas une matière : c'est un ensemble de sujets d'examen. Chaque sujet d'origine (« ANTENNE (session) · MATIÈRE ») reste
+   un sujet entier (pas de découpage en paquets de ~50) ; « FAIRE les quiz » les range comme l'appli : une carte par matière, une ligne par
+   antenne, une colonne par année (2024 = S1, 2025 = S2, 2026 = S3, ou l'année écrite dans le nom). Les sujets J de préparation au D.E
+   forment leur propre carte. Accès Premium, sujets offerts, reprise d'un sujet commencé : inchangés (mêmes sujets, startSujet). */
+const RECUEIL={xmvkq4zed:1};
+(function(){if(typeof VUE_DEF==='undefined'||typeof sujets!=='function')return;Object.keys(RECUEIL).forEach(id=>{if(VUE_DEF[id]==null)VUE_DEF[id]='sujets'});
+ const estRec=m=>!!(m&&(RECUEIL[m.id]||m.recueil)&&vueSuj(m));
+ const MATN={'CHIRURGIE':'Chirurgie','PÉDIATRIE':'Pédiatrie','MÉDECINE':'Médecine','SANTÉ PUBLIQUE':'Santé publique','GYNÉCO-OBSTÉTRIQUE':'Gynéco-obstétrique','SSR / PF':'SSR / PF'};
+ const ORD=['Médecine','Chirurgie','Pédiatrie','Santé publique','Gynéco-obstétrique','SSR / PF'];
+ const joli=s=>{s=String(s||'').trim();const u=s.toUpperCase();if(MATN[u])return MATN[u];return s===u?s.charAt(0)+s.slice(1).toLowerCase():s};
+ const ville=a=>{const c=String(a).replace(/\s*\([^)]*\)\s*/g,' ').trim();return c.split(/([\s-])/).map(w=>w.length>1?w.charAt(0)+w.slice(1).toLowerCase():w).join('')};
+ const annee=a=>{a=String(a);let x=a.match(/\bS\d+\s*:\s*(20\d\d)\b/);if(x)return +x[1];x=a.match(/\b(20\d\d)\b/);if(x)return +x[1];x=a.match(/session\s*(\d+)/i)||a.match(/\bS(\d+)\b/);return 2023+(x?+x[1]:1)};
+ /* un sujet → {j (préparation D.E), mat, ville, an} d'après son titre (chName : renommages de l'éditeur compris) */
+ function lire(mid,c){const t=String(chName(mid,c)||''),p=t.split(' · ');if(/^J\b|PRÉPARATION AU D\.?E/i.test(p[0]))return{j:1,t:p.slice(1).join(' · ')||t,sm:p[1]||''};
+  if(p.length<2)return{autre:1,t};return{mat:joli(p.slice(1).join(' · ')),ville:ville(p[0]),an:annee(p[0])}}
+ const _titre=sujTitre;sujTitre=function(mid,k){const m=MATI[mid];if(!estRec(m))return _titre.apply(this,arguments);const L=sujets(mid)[k];if(!L||L.c==null)return _titre.apply(this,arguments);
+  const x=lire(mid,L.c);return x.mat?x.mat+' · '+x.ville+' · '+x.an:x.t||_titre.apply(this,arguments)};
+ const stat=ids=>{let seen=0,ok=0;ids.forEach(id=>{const s=S.qs[id];if(s){seen++;if(s.l)ok++}});return{seen,ok}};
+ function arbreHTML(m){const L=sujets(m.id);if(!L.length)return `<div class="empty">${T('toast.noq','Aucune question ici')}</div>`;const jm=jsq(m.id);
+  const M={},J=[],A=[];L.forEach((ids,k)=>{if(ids.c==null){A.push(k);return}const x=lire(m.id,ids.c);if(x.j){J.push([k,x]);return}if(x.autre){A.push(k);return}
+   const G=M[x.mat]=M[x.mat]||{v:[],by:{},ans:new Set(),n:0,q:0};if(!G.by[x.ville]){G.by[x.ville]={};G.v.push(x.ville)}(G.by[x.ville][x.an]=G.by[x.ville][x.an]||[]).push(k);G.ans.add(x.an);G.n++;G.q+=ids.length});
+  const done=k=>(S.done||[]).some(x=>x.mid===m.id&&x.k===k);
+  const puce=k=>{const ids=L[k],s=stat(ids);return `<div class="suj sf rc-y ${done(k)?'done':''}" onclick="startSujet('${jm}',${k})"><div class="tx"><b></b><small>${s.seen?s.seen+'/':''}${ids.length} q${s.ok?' · ✅'+s.ok:''}</small><div class="bar"><i style="width:${Math.round(s.seen/ids.length*100)}%"></i></div></div></div>`};
+  const mats=Object.keys(M).sort((a,b)=>{const i=ORD.indexOf(a),j=ORD.indexOf(b);return(i<0?99:i)-(j<0?99:j)});
+  let h=mats.map((nm,mi)=>{const G=M[nm],Y=[...G.ans].sort((a,b)=>a-b),col=`minmax(0,1.05fr) repeat(${Y.length},minmax(0,1fr))`;
+   return `<details class="card sf rc-mat" ${mi===0?'open':''}><summary><b>${esc(nm)}</b><small class="muted"> · ${G.n} ${esc(Tx('hsuj.n','sujets'))} · ${G.q} q</small></summary>`+
+    G.v.map(v=>`<div class="rc-row" style="grid-template-columns:${col}"><span class="rc-v">${esc(v)}</span>${Y.map(y=>`<span class="rc-c">${(G.by[v][y]||[]).map(k=>puce(k).replace('<b></b>',`<b>${y}</b>`)).join('')}</span>`).join('')}</div>`).join('')+`</details>`}).join('');
+  if(J.length){const sm=[];J.forEach(([k,x])=>{if(!sm.includes(x.sm))sm.push(x.sm)});
+   h+=`<details class="card sf rc-mat"><summary><b>${esc(Tx('rc.j','🎓 Préparation au D.E (J)'))}</b><small class="muted"> · ${J.length} ${esc(Tx('hsuj.n','sujets'))}</small></summary>`+
+    sm.map(s=>`<div class="rc-sub">${esc(s)}</div>`+J.filter(([k,x])=>x.sm===s).map(([k,x])=>{const ids=L[k],st=stat(ids);
+     return `<div class="suj sf ${done(k)?'done':''}" onclick="startSujet('${jm}',${k})"><div class="tx"><b>${esc(x.t.replace(s+' · ',''))}</b><small>${T('hsuj.s','{n} questions · {seen} faites · ✅ {ok}',{n:ids.length,seen:st.seen,ok:st.ok})}</small></div></div>`}).join('')).join('')+`</details>`}
+  if(A.length)h+=A.map(k=>{const ids=L[k],st=stat(ids);return `<div class="suj sf ${done(k)?'done':''}" onclick="startSujet('${jm}',${k})"><div class="tx"><b>${esc(sujTitre(m.id,k))}</b><small>${T('hsuj.s','{n} questions · {seen} faites · ✅ {ok}',{n:ids.length,seen:st.seen,ok:st.ok})}</small></div></div>`}).join('');
+  return h}
+ window.recueilHTML=arbreHTML;
+ /* page du cours : un recueil de sujets n'a ni résumés, ni flashcards, ni appli à ouvrir → seulement ses sujets ;
+    en mode édition, les boutons d'origine restent accessibles dans un volet replié (masqués aux élèves) */
+ const BA=BLK['matiere.actions'];if(BA){const _a=BA.html;BA.html=function(){const m=ctx&&ctx.id&&matOf(ctx.id);if(!estRec(m))return _a.apply(this,arguments);
+  const t=`<div class="secT">${T('msuj.h','📝 Sujets')}<span class="ln"></span></div><div class="muted small" style="margin-bottom:10px">${T('rc.help','Choisis la matière, puis l’antenne et l’année : le sujet s’affiche en entier, avec la correction dès que tu réponds.')}</div>`+arbreHTML(m);
+  if(!EDITMODE)return t;if(!garderOrig(m))return _a.apply(this,arguments);return t+`<details class="card sf" style="margin-top:12px"><summary style="cursor:pointer"><b>✏️ ${esc(Tx('rc.ed','Mode édition : boutons du cours (masqués aux élèves)'))}</b></summary><div style="margin-top:8px">${_a.apply(this,arguments)}</div></details>`}}
+ const _sl=sujListeHTML;sujListeHTML=function(m){return estRec(m)?arbreHTML(m):_sl.apply(this,arguments)};
+ const B0=BLK['sujets.list'];if(B0){const _h=B0.html;B0.html=function(){const m=ctx&&ctx.id&&matOf(ctx.id);if(!estRec(m))return _h.apply(this,arguments);
+  return `<div class="muted small" style="margin-bottom:10px">${T('rc.help','Choisis la matière, puis l’antenne et l’année : le sujet s’affiche en entier, avec la correction dès que tu réponds.')}</div>`+arbreHTML(m)}}
+ const st=document.createElement('style');st.textContent=`.rc-mat{padding:12px 12px 10px!important}.rc-mat>summary{cursor:pointer;font-size:16px;padding:2px 2px 6px;list-style-position:inside}
+ .rc-row{display:grid;gap:6px;align-items:center;margin:5px 0}.rc-head span{font-size:12px;font-weight:800;color:var(--soft,#5E6E68);text-align:center}.rc-v{font-weight:800;font-size:13px;min-width:0;overflow-wrap:anywhere;hyphens:auto;line-height:1.15}
+ .rc-c{min-width:0;display:flex;flex-direction:column;gap:4px}.rc-y{margin:0!important;padding:7px 6px!important;min-height:0!important;text-align:center;display:block!important;border-radius:14px!important}
+ .rc-y .tx{display:block}.rc-y .tx b{display:block;font-size:13.5px}.rc-y .tx small{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rc-y .bar{margin-top:4px}
+ .rc-y .ri-b,.rc-y .rib{display:block;margin:3px auto 0;font-size:9.5px}.rc-sub{font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;opacity:.8;margin:12px 4px 4px}`;
+ document.head.appendChild(st)})();
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

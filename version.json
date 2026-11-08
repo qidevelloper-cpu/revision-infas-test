@@ -1,10 +1,10 @@
 {
- "v": "4ccd46fff0",
+ "v": "e46a8b8be2",
  "date": "2026-10-25",
- "sig": "1cd1b2bbab32d355fd1ce0301fe8c4e15ffee61a",
+ "sig": "69dc7aaf4a281784a28bc8b95f6c143017b7a043",
  "notes": [
   {
-   "t": "Examens blancs : tous les sujets s'ouvrent en liste à faire défiler · sujets 2024, 2025 et 2026 bien séparés · Pédiatrie Exercices : séances en liste et décor du portail"
+   "t": "Correction nationale : uniquement ses sujets, rangés par matière, antenne et année · examens blancs en liste à faire défiler · Pédiatrie Exercices intégrée au portail"
   }
  ],
  "mats": {
@@ -103,11 +103,11 @@
  },
  "hist": [
   {
-   "v": "4ccd46fff0",
+   "v": "e46a8b8be2",
    "date": "2026-10-25",
    "notes": [
     {
-     "t": "Examens blancs : tous les sujets s'ouvrent en liste à faire défiler · sujets 2024, 2025 et 2026 bien séparés · Pédiatrie Exercices : séances en liste et décor du portail"
+     "t": "Correction nationale : uniquement ses sujets, rangés par matière, antenne et année · examens blancs en liste à faire défiler · Pédiatrie Exercices intégrée au portail"
     }
    ]
   },
