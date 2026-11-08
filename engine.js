@@ -1913,8 +1913,8 @@ function sujListeHTML(m){const L=sujets(m.id);if(!L.length)return `<div class="e
 const _matActSuj=BLK['matiere.actions'].html;BLK['matiere.actions'].html=function(){const m=matOf(ctx.id);if(!vueSuj(m)||garderOrig(m))return _matActSuj.apply(this,arguments);
  return `<div class="secT">${T('msuj.h','📝 Sujets')}<span class="ln"></span></div><div class="muted small" style="margin-bottom:8px">${T('msuj.help','Touche un sujet : toutes ses questions s’affichent, dans l’ordre, avec la correction dès que tu réponds.')}</div>`+sujListeHTML(m)};
 B('home.sujets','Sujets (accueil)',()=>{const L=myMats().filter(m=>m.accueil&&(QBM[m.id]||[]).length);
- if(!L.length)return EDITMODE?`<div class="card sf"><h3>${T('hsuj.h','📝 Sujets')}</h3><div class="empty">${esc('Coche « 📝 Sujets sur l’accueil » sur une matière (Éditeur → 📚 Contenu → Matières) : ses sujets apparaîtront ici.')}</div></div>`:'';
- return `<div class="secT">${T('hsuj.h','📝 Sujets')}<span class="ln"></span></div>`+L.map((m,i)=>`<details class="card sf hsuj" ${i===0?'open':''}><summary style="cursor:pointer"><b>${esc(m.emo+' '+m.title)}</b> <small class="muted">· ${sujets(m.id).length} ${esc(Tx('hsuj.n','sujets'))}</small></summary><div style="margin-top:8px">${sujListeHTML(m)}</div></details>`).join('')});
+ if(!L.length)return EDITMODE?`<div class="card sf"><h3>${T('hsuj.h','📝 DOCUMENT DE REVISION INFAS')}</h3><div class="empty">${esc('Coche « 📝 Sujets sur l’accueil » sur une matière (Éditeur → 📚 Contenu → Matières) : ses sujets apparaîtront ici.')}</div></div>`:'';
+ return `<div class="secT">${T('hsuj.h','📝 DOCUMENT DE REVISION INFAS')}<span class="ln"></span></div>`+L.map((m,i)=>`<details class="card sf hsuj" ${i===0?'open':''}><summary style="cursor:pointer"><b>${esc(m.emo+' '+revTitre(m))}</b> <small class="muted">· ${sujets(m.id).length} ${esc(Tx('hsuj.n','sujets'))}</small></summary><div style="margin-top:8px">${sujListeHTML(m)}</div></details>`).join('')});
 (function(){const H=SCREENS.home.blocks;if(!H.includes('home.sujets')){const i=H.indexOf('home.mat');H.splice(i<0?H.length:i,0,'home.sujets')}})();
 /* une mise en page de l'accueil enregistrée avant cette version reçoit la rubrique, sans modifier la configuration */
 const _layoutOfSuj=layoutOf;layoutOf=function(sc){const L=_layoutOfSuj(sc);if(sc!=='home'||!Array.isArray(L)||L.some(b=>b.id==='home.sujets'))return L;const C=L.slice(),i=C.findIndex(b=>b.id==='home.mat');C.splice(i<0?C.length:i,0,{id:'home.sujets',inst:'home.sujets'});return C};
@@ -2691,7 +2691,7 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
  const _titre=sujTitre;sujTitre=function(mid,k){const p=sujPrefixe(mid);if(p&&!vueSuj(MATI[mid]))return p+' '+(k+1);return _titre.apply(this,arguments)};
  const _liste=BLK['sujets.list'].html;BLK['sujets.list'].html=function(){let h=_liste.apply(this,arguments);const p=ctx&&ctx.id&&sujPrefixe(ctx.id);if(p&&(S.sujMode||'suj')==='suj')h=h.replace(/Sujet (\d+) · /g,(x,n)=>esc(p)+' '+n+' · ');return h};
  const _st=startSujet;startSujet=function(mid,k){const a=arguments,L=sujets(mid)[k];if(!L)return;
-  if(!sujPrefixe(mid))return _st.apply(this,a);   /* choix ordre / aléatoire : sujets de la Prépa D.E seulement */
+  if(!sujPrefixe(mid)&&!(MATI[mid]&&MATI[mid].accueil))return _st.apply(this,a);   /* choix ordre / aléatoire : Prépa D.E et cours de la rubrique « DOCUMENT DE REVISION INFAS » */
   if(typeof RIC!=='undefined'&&RIC.can&&!RIC.off()&&!RIC.can('matiere:'+mid+'/sujet:'+(k+1)))return _st.apply(this,a);
   let o=$('#riordre');if(o)o.remove();o=document.createElement('div');o.id='riordre';o.className='pmod';const pref=S.ordre==='alea'?'alea':'ordre';
   o.innerHTML=`<div class="pbox"><h3>📝 ${esc(sujTitre(mid,k))}</h3><div class="muted small">${((typeof RIC!=='undefined'&&RIC.libres&&RIC.libres(mid,k))||L).length} ${esc(Tx('or.q','questions'))}${S.timed?' · '+esc(Tx('or.timed','mode chronométré')):''}</div>
@@ -2934,5 +2934,31 @@ const RECUEIL={xmvkq4zed:1};
  .rc-y .tx{display:block}.rc-y .tx b{display:block;font-size:13.5px}.rc-y .tx small{display:block;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rc-y .bar{margin-top:4px}
  .rc-y .ri-b,.rc-y .rib{display:block;margin:3px auto 0;font-size:9.5px}.rc-sub{font-weight:900;font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;opacity:.8;margin:12px 4px 4px}`;
  document.head.appendChild(st)})();
+
+/* ======================= DOCUMENTS DE RÉVISION AJOUTÉS À UN COURS (tools/revisions.py → XD['revisions-<cours>']) =======================
+   Les questions s'ajoutent APRÈS celles du cours (identifiants <cours>.<n> stables), un chapitre par sujet de révision.
+   Les sujets d'origine du cours sont calculés comme avant sur les seules questions d'origine (inchangés) ; chaque sujet de
+   révision (~50 questions) vient ensuite, avec son titre (« Révision de gynécologie sujet 1 »…).
+   Rubrique de l'accueil : « DOCUMENT DE REVISION INFAS », et « DOCUMENT DE REVISION <MATIÈRE> » pour chaque cours. */
+function revTitre(m){if(!m)return'';if(m.revTitre)return m.revTitre;const b=String(m.title||m.short||'').split(/\s+[—–]\s+/)[0].trim();
+ return 'DOCUMENT DE REVISION '+b.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase()}
+const DOCREV={};
+(function(){if(typeof applyContent!=='function'||typeof DATA0==='undefined')return;
+ function injecter(){Object.keys(XD).forEach(k=>{if(!k.startsWith('revisions-'))return;const mid=k.slice(10),R=XD[k];if(DOCREV[mid]||!R||!Array.isArray(R.sujets))return;
+   const m=(DATA0.mat||[]).find(x=>x.id===mid);if(!m||!DATA0.q||!Array.isArray(DATA0.q[mid])||!Array.isArray(m.ch))return;
+   const n0q=DATA0.q[mid].length,n0ch=m.ch.length,tit=R.sujets.map(x=>x.t);
+   DATA0.q[mid]=DATA0.q[mid].concat(...R.sujets.map((x,j)=>x.q.map(q=>Object.assign({},q,{c:n0ch+j}))));m.ch=m.ch.concat(tit);
+   DOCREV[mid]={n0q,n0ch,tit}})}
+ const _ac=applyContent;applyContent=function(){try{injecter()}catch(e){}const r=_ac.apply(this,arguments);
+  /* titres des chapitres ajoutés gardés même si l'éditeur a renommé les chapitres d'origine */
+  try{Object.keys(DOCREV).forEach(mid=>{const m=MATI[mid],R=DOCREV[mid];if(m&&Array.isArray(m.ch)&&m.ch.length<R.n0ch+R.tit.length)m.ch=m.ch.slice(0,R.n0ch).concat(R.tit)})}catch(e){}return r};
+ const _sj=sujets;sujets=function(mid){const R=DOCREV[mid],m=MATI[mid];if(!R||vueSuj(m))return _sj.apply(this,arguments);
+  const Q=QBM[mid]||[],plus=Q.filter(q=>q.c>=R.n0ch);let L;QBM[mid]=Q.filter(q=>q.c<R.n0ch);try{L=_sj.apply(this,arguments)}finally{QBM[mid]=Q}
+  R.tit.forEach((t,j)=>{const ids=plus.filter(q=>q.c===R.n0ch+j).map(q=>q.id);if(ids.length){ids.c=R.n0ch+j;ids.rev=1;L.push(ids)}});return L};
+ const _ti=sujTitre;sujTitre=function(mid,k){const R=DOCREV[mid];if(R){const L=sujets(mid)[k];if(L&&L.rev)return chName(mid,L.c)}return _ti.apply(this,arguments)};
+ /* « Faire les quiz » : titre du sujet de révision à la place de « Sujet 19 » */
+ const B0=BLK['sujets.list'];if(B0){const _h=B0.html;B0.html=function(){let h=_h.apply(this,arguments);const mid=ctx&&ctx.id;if(!mid||!DOCREV[mid]||(S.sujMode||'suj')!=='suj')return h;
+  sujets(mid).forEach((L,k)=>{if(L.rev)h=h.replace(new RegExp('Sujet '+(k+1)+' · '),esc(sujTitre(mid,k))+' · ')});return h}}
+})();
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

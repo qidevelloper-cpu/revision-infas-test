@@ -1,10 +1,14 @@
 {
- "v": "4f400164df",
+ "v": "b379443e95",
  "date": "2026-10-25",
- "sig": "befb7bc5241714526f9a3a3e019ad914a3b81699",
+ "sig": "b1c364be3ed59c49fa76216f04c73cf021d5f6ca",
  "notes": [
   {
-   "t": "Préparation D.E (J) : 9 nouveaux sujets (Médecine, Chirurgie, Gynéco, Santé publique, SSR/PF, Pédiatrie) · Correction nationale rangée par matière, antenne et année"
+   "t": "Révision de gynécologie : 8 nouveaux sujets (360 questions) · rubrique « DOCUMENT DE REVISION INFAS » · Préparation D.E (J) : 9 nouveaux sujets"
+  },
+  {
+   "t": "🔄 Cours mis à jour : Gynéco-Obstétrique",
+   "m": "gyneco"
   },
   {
    "t": "🔄 Cours mis à jour : Correction Nationale 2025 — Examens blancs infirmier",
@@ -18,7 +22,7 @@
   },
   "gyneco": {
    "t": "Gynéco-Obstétrique",
-   "h": "eef4004fe76f1dccb2df8dc88ebc9ede7fb341a9"
+   "h": "ee5f6602625b3f1d7669ead4febc7723ef24d3a5"
   },
   "vih": {
    "t": "VIH & traitement ARV",
@@ -107,11 +111,15 @@
  },
  "hist": [
   {
-   "v": "4f400164df",
+   "v": "b379443e95",
    "date": "2026-10-25",
    "notes": [
     {
-     "t": "Préparation D.E (J) : 9 nouveaux sujets (Médecine, Chirurgie, Gynéco, Santé publique, SSR/PF, Pédiatrie) · Correction nationale rangée par matière, antenne et année"
+     "t": "Révision de gynécologie : 8 nouveaux sujets (360 questions) · rubrique « DOCUMENT DE REVISION INFAS » · Préparation D.E (J) : 9 nouveaux sujets"
+    },
+    {
+     "t": "🔄 Cours mis à jour : Gynéco-Obstétrique",
+     "m": "gyneco"
     },
     {
      "t": "🔄 Cours mis à jour : Correction Nationale 2025 — Examens blancs infirmier",
