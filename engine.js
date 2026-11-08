@@ -2840,4 +2840,48 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
   try{const m=String(k).match(/^(.+?)__(.+)__(\d+)$/);if(!m)return null;const t=table(a.m),e=t&&t[m[1]+'/'+m[2]];if(!e)return null;
    const j=e.j+(+m[3]),P=XD['plusnat-'+a.m];return P.q[j]&&P.q[j].c===e.i?C[a.m].n0+j:null}catch(x){return null}}})();
 
+/* ======================= APPLIS « EXERCICES & CORRIGÉS » (Pédiatrie xpedexo et toute appli du même modèle : QCM_DATA / QCD_DATA / QROC_DATA) =======================
+   1. la séance réglée dans l'appli (« Commencer la session ») s'ouvre dans le portail, en liste à faire défiler, avec les questions natives
+      du cours (même ordre : QCM, puis QCD, puis QROC ; texte vérifié — au moindre écart, l'appli garde son propre quiz) ;
+      chaque réponse tient aussi à jour la progression de l'appli (ses compteurs « Jamais traitées » / « Non maîtrisées »).
+   2. interface « Révision INFAS » : décor du portail (fond, bandeau, cartes, boutons) à la place du décor violet d'origine. */
+(function(){if(typeof appExtra!=='function'||typeof startFil!=='function')return;
+ const estExo=src=>/const QCM_DATA\s*=/.test(src)&&/const QCD_DATA\s*=/.test(src)&&/const QROC_DATA\s*=/.test(src)&&/function poolFor\(/.test(src)&&/function startSession\(/.test(src);
+ function exoPont(){var P=window.parent;function pose(){var o=window.startSession;if(typeof o!=='function'||o.__ri)return;
+   var f=function(){var r=o.apply(this,arguments);try{if(state&&(state.screen==='quiz'||state.screen==='flash')&&state.queue&&state.queue.length){
+     var n1=QCM_DATA.length,n2=n1+QCD_DATA.length;
+     var L=state.queue.map(function(it){var k=it._k||state.sessionKind,A=k==='qcm'?QCM_DATA:k==='qcd'?QCD_DATA:QROC_DATA,j=-1;for(var i=0;i<A.length;i++)if(A[i].id===it.id){j=i;break}
+      return{k:k,id:it.id,i:j<0?-1:(k==='qcm'?0:k==='qcd'?n1:n2)+j,t:it.stem||it.question_clean||''}});
+     var lab={qcm:'QCM',qcd:'QCD — Vrai / Faux',mixed:'QCM + QCD',qroc:'QROC'}[state.sessionKind]||'';
+     if(P&&P.riFilExo&&P.riFilExo(window,L,lab,typeof STORAGE_KEY==='string'?STORAGE_KEY:'')){state.screen='config';render()}}}catch(e){}return r};
+   f.__ri=1;window.startSession=f}
+  document.addEventListener('DOMContentLoaded',pose);setTimeout(pose,0);setInterval(pose,1500)}
+ const nrm=s=>String(s||'').replace(/\s+/g,' ').trim().slice(0,40);
+ window.riFilExo=function(win,L,lab,cle){const mid=VIEW==='appview'&&ctx&&ctx.id,m=mid&&MATI[mid];if(!m||!Array.isArray(L)||!L.length)return false;
+  const X=(typeof XD!=='undefined'&&XD[m.id])||null,ids=[],map={};
+  for(const x of L){if(!(x.i>=0))return false;const id=m.id+'.'+x.i,o=X&&X.q&&X.q[x.i]?X.q[x.i]:QI[id];if(!o||nrm(o.q)!==nrm(x.t))return false;if(QI[id]&&!map[id]){ids.push(id);map[id]={k:x.k,id:x.id}}}
+  if(!ids.length)return false;startFil(m.id,ids,(m.short||m.title)+(lab?' · '+lab:''),'app',null);if(FILS)FILS.exo={win,map,cle};return true};
+ /* progression de l'appli : par l'appli si son cadre est encore là, sinon directement dans sa clé (même calcul que son markResult) */
+ function exoRec(cle,x,ok){if(!cle)return;let P={};try{P=JSON.parse(localStorage.getItem(cle)||'{}')||{}}catch(e){}['qcm','qcd','qroc'].forEach(k=>{if(!P[k]||typeof P[k]!=='object')P[k]={}});const T=P[x.k]=P[x.k]||{},c=T[x.id]||{streak:0,seen:0,correct:0};
+  c.seen=(c.seen||0)+1;if(ok){c.streak=(c.streak||0)+1;c.correct=(c.correct||0)+1}else c.streak=0;c.status=c.streak>=2?'maitrise':(!ok?'difficile':'en_cours');T[x.id]=c;
+  try{localStorage.setItem(cle,JSON.stringify(P))}catch(e){}}
+ const _recExo=rec;rec=function(q,ok){const r=_recExo.apply(this,arguments);try{const A=FILS&&FILS.exo,x=A&&q&&A.map[q.id];if(x){const w=A.win,fe=w&&!w.closed&&w.frameElement;
+  if(fe&&document.contains(fe)&&typeof w.markResult==='function'){w.markResult(x.k,x.id,!!ok);try{if(w.state&&w.state.screen!=='quiz')w.render()}catch(e){}}else exoRec(A.cle,x,!!ok)}}catch(e){}return r};
+ function exoCss(){const t=palette(),cs=getComputedStyle(document.documentElement),v=n=>cs.getPropertyValue(n).trim();const card=v('--card')||'#fff',ink=v('--ink')||'#16231F',soft=v('--soft')||'#5E6E68',line=v('--line')||'#E1DDD2';
+  return `body{background:${t.bg}!important;background-image:none!important;color:${ink}!important}.signature-bar{display:none!important}
+  h1,h2,h3,.display,.config-title,.mode-card .body h3,.stat-card .num,.quiz-counter,.q-tag{font-family:"Outfit",system-ui,sans-serif!important}
+  .hero{background:linear-gradient(135deg,${t.h1},${t.h2})!important;border-radius:24px!important;box-shadow:0 10px 26px rgba(0,0,0,.16)!important;text-align:left!important;padding:22px 20px 80px!important}
+  .hero-blob{display:none!important}.hero h1{color:#fff!important;font-weight:900!important;letter-spacing:-.4px!important;text-align:left!important}.hero p{color:rgba(255,255,255,.9)!important;margin:0!important;text-align:left!important;max-width:none!important}
+  .hero .eyebrow{background:rgba(255,255,255,.16)!important;color:#fff!important;box-shadow:none!important}
+  .stat-card,.mode-card,.config-panel,.q-card,.search-bar,.search-result,.case-card,.flash-card,.results-card,.res-card{background:${card}!important;border:1px solid ${line}!important;border-radius:22px!important;box-shadow:0 6px 22px rgba(0,0,0,.06)!important}
+  .mode-card:hover{transform:none!important}.mode-card .body h3,.config-title,.q-stem{color:${ink}!important;font-weight:800!important}.mode-card .body p,.config-sub,.field-group>label,.stat-card .lbl{color:${soft}!important}.mode-card .chev{color:${soft}!important}
+  .mode-card .icon{background:${t.acc}!important;border-radius:16px!important;box-shadow:none!important}
+  .stat-card .num{color:${t.h2}!important}.mode-card .progress-mini>div,.progress-bar>div{background:${t.acc}!important}
+  .chip{border-color:${line}!important;color:${ink}!important;background:${card}!important}.chip.active{background:${t.h1}!important;border-color:${t.h1}!important;color:#fff!important;box-shadow:none!important}
+  .btn-primary{background:${t.h1}!important;color:#fff!important;box-shadow:none!important;border-radius:18px!important;font-weight:800!important}.btn-primary:hover{transform:none!important}
+  input:checked+.slider-tog{background:${t.h1}!important}
+  .back-link,.quiz-counter{color:${ink}!important}.back-link:hover{color:${t.h1}!important}`}
+ const _ax=appExtra;appExtra=function(m,src){const r=_ax.apply(this,arguments);try{if(m&&src&&estExo(src)){r.js+='<script>('+exoPont.toString()+')()<'+'/script>';if(appUiOf(m.id)==='ri')r.css+=exoCss()}}catch(e){}return r};
+})();
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
