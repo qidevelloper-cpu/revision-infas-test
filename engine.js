@@ -2895,13 +2895,14 @@ const RECUEIL={xmvkq4zed:1};
  const MATN={'CHIRURGIE':'Chirurgie','PÉDIATRIE':'Pédiatrie','MÉDECINE':'Médecine','SANTÉ PUBLIQUE':'Santé publique','GYNÉCO-OBSTÉTRIQUE':'Gynéco-obstétrique','SSR / PF':'SSR / PF'};
  const ORD=['Médecine','Chirurgie','Pédiatrie','Santé publique','Gynéco-obstétrique','SSR / PF'];
  const joli=s=>{s=String(s||'').trim();const u=s.toUpperCase();if(MATN[u])return MATN[u];return s===u?s.charAt(0)+s.slice(1).toLowerCase():s};
+ const libJ=r=>{if(r!==r.toUpperCase())return r;let x=r.toLowerCase();x=x.charAt(0).toUpperCase()+x.slice(1);return x.replace(/\bd\.e\b/g,'D.E').replace(/\b(gynéco|pédiatrie|médecine|chirurgie)\b/g,m=>m.charAt(0).toUpperCase()+m.slice(1))};
  const ville=a=>{const c=String(a).replace(/\s*\([^)]*\)\s*/g,' ').trim();return c.split(/([\s-])/).map(w=>w.length>1?w.charAt(0)+w.slice(1).toLowerCase():w).join('')};
  const annee=a=>{a=String(a);let x=a.match(/\bS\d+\s*:\s*(20\d\d)\b/);if(x)return +x[1];x=a.match(/\b(20\d\d)\b/);if(x)return +x[1];x=a.match(/session\s*(\d+)/i)||a.match(/\bS(\d+)\b/);return 2023+(x?+x[1]:1)};
  /* un sujet → {j (préparation D.E), mat, ville, an} d'après son titre (chName : renommages de l'éditeur compris) */
- function lire(mid,c){const t=String(chName(mid,c)||''),p=t.split(' · ');if(/^J\b|PRÉPARATION AU D\.?E/i.test(p[0]))return{j:1,t:p.slice(1).join(' · ')||t,sm:p[1]||''};
+ function lire(mid,c){const t=String(chName(mid,c)||''),p=t.split(' · ');if(/^J\b|PRÉPARATION AU D\.?E/i.test(p[0])){const sm=p[1]||'',jm=joli(sm.replace(/^J\d*\s+/i,'')),r=p.slice(2).join(' · ');return{j:1,t:p.slice(1).join(' · ')||t,sm,jm,lib:r?libJ(r):(p.slice(1).join(' · ')||t)}}
   if(p.length<2)return{autre:1,t};return{mat:joli(p.slice(1).join(' · ')),ville:ville(p[0]),an:annee(p[0])}}
  const _titre=sujTitre;sujTitre=function(mid,k){const m=MATI[mid];if(!estRec(m))return _titre.apply(this,arguments);const L=sujets(mid)[k];if(!L||L.c==null)return _titre.apply(this,arguments);
-  const x=lire(mid,L.c);return x.mat?x.mat+' · '+x.ville+' · '+x.an:x.t||_titre.apply(this,arguments)};
+  const x=lire(mid,L.c);return x.mat?x.mat+' · '+x.ville+' · '+x.an:x.j?'J · '+x.jm+' · '+x.lib:x.t||_titre.apply(this,arguments)};
  const stat=ids=>{let seen=0,ok=0;ids.forEach(id=>{const s=S.qs[id];if(s){seen++;if(s.l)ok++}});return{seen,ok}};
  function arbreHTML(m){const L=sujets(m.id);if(!L.length)return `<div class="empty">${T('toast.noq','Aucune question ici')}</div>`;const jm=jsq(m.id);
   const M={},J=[],A=[];L.forEach((ids,k)=>{if(ids.c==null){A.push(k);return}const x=lire(m.id,ids.c);if(x.j){J.push([k,x]);return}if(x.autre){A.push(k);return}
@@ -2912,10 +2913,10 @@ const RECUEIL={xmvkq4zed:1};
   let h=mats.map((nm,mi)=>{const G=M[nm],Y=[...G.ans].sort((a,b)=>a-b),col=`minmax(0,1.05fr) repeat(${Y.length},minmax(0,1fr))`;
    return `<details class="card sf rc-mat" ${mi===0?'open':''}><summary><b>${esc(nm)}</b><small class="muted"> · ${G.n} ${esc(Tx('hsuj.n','sujets'))} · ${G.q} q</small></summary>`+
     G.v.map(v=>`<div class="rc-row" style="grid-template-columns:${col}"><span class="rc-v">${esc(v)}</span>${Y.map(y=>`<span class="rc-c">${(G.by[v][y]||[]).map(k=>puce(k).replace('<b></b>',`<b>${y}</b>`)).join('')}</span>`).join('')}</div>`).join('')+`</details>`}).join('');
-  if(J.length){const sm=[];J.forEach(([k,x])=>{if(!sm.includes(x.sm))sm.push(x.sm)});
+  if(J.length){const sm=[];J.forEach(([k,x])=>{if(!sm.includes(x.jm))sm.push(x.jm)});sm.sort((a,b)=>{const i=ORD.indexOf(a),j=ORD.indexOf(b);return(i<0?99:i)-(j<0?99:j)});
    h+=`<details class="card sf rc-mat"><summary><b>${esc(Tx('rc.j','🎓 Préparation au D.E (J)'))}</b><small class="muted"> · ${J.length} ${esc(Tx('hsuj.n','sujets'))}</small></summary>`+
-    sm.map(s=>`<div class="rc-sub">${esc(s)}</div>`+J.filter(([k,x])=>x.sm===s).map(([k,x])=>{const ids=L[k],st=stat(ids);
-     return `<div class="suj sf ${done(k)?'done':''}" onclick="startSujet('${jm}',${k})"><div class="tx"><b>${esc(x.t.replace(s+' · ',''))}</b><small>${T('hsuj.s','{n} questions · {seen} faites · ✅ {ok}',{n:ids.length,seen:st.seen,ok:st.ok})}</small></div></div>`}).join('')).join('')+`</details>`}
+    sm.map(s=>`<div class="rc-sub">${esc('J · '+s)}</div>`+J.filter(([k,x])=>x.jm===s).map(([k,x])=>{const ids=L[k],st=stat(ids);
+     return `<div class="suj sf ${done(k)?'done':''}" onclick="startSujet('${jm}',${k})"><div class="tx"><b>${esc(x.lib)}</b><small>${T('hsuj.s','{n} questions · {seen} faites · ✅ {ok}',{n:ids.length,seen:st.seen,ok:st.ok})}</small></div></div>`}).join('')).join('')+`</details>`}
   if(A.length)h+=A.map(k=>{const ids=L[k],st=stat(ids);return `<div class="suj sf ${done(k)?'done':''}" onclick="startSujet('${jm}',${k})"><div class="tx"><b>${esc(sujTitre(m.id,k))}</b><small>${T('hsuj.s','{n} questions · {seen} faites · ✅ {ok}',{n:ids.length,seen:st.seen,ok:st.ok})}</small></div></div>`}).join('');
   return h}
  window.recueilHTML=arbreHTML;
