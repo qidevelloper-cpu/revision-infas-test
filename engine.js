@@ -2788,7 +2788,7 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
 (function(){if(typeof startFil!=='function')return;
  const cle=F=>F.mid+'|'+(F.mode||'suj')+'|'+(F.mode==='suj'&&F.k!=null?F.k:F.label);
  const nRep=F=>Object.keys(F.ans||{}).filter(id=>F.ans[id]&&!F.ans[id].pending).length;
- function garder(){try{if(!FILS||!FILS.mid||FILS.mode==='diff')return;const E2=S.encours=S.encours||{},k=cle(FILS);
+ function garder(){try{if(!FILS||!FILS.mid||FILS.mode==='diff'||FILS.mode==='compo')return;   /* compo par lien : jamais mise de côté */const E2=S.encours=S.encours||{},k=cle(FILS);
   if(FILS.fin||!nRep(FILS)){if(E2[k]){delete E2[k];save()}return}
   E2[k]={mid:FILS.mid,ids:FILS.ids.slice(),label:FILS.label,mode:FILS.mode,k:FILS.k,ans:FILS.ans,ms:FILS.ms,ok:FILS.ok,week:FILS.week,min:FILS.min||0,reste:FILS.end?Math.max(0,FILS.end-Date.now()):0,expire:!!FILS.expire,t:Date.now()};
   const L=Object.keys(E2).sort((a,b)=>E2[b].t-E2[a].t);L.slice(12).forEach(x=>delete E2[x]);save()}catch(e){}}
@@ -2979,6 +2979,127 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  const _lo=layoutOf;layoutOf=function(sc){const L=_lo(sc);if(sc!=='home'||!Array.isArray(L)||L.some(b=>b.id==='home.resumes'))return L;const C=L.slice(),i=C.findIndex(b=>b.id==='home.sujets'),j=C.findIndex(b=>b.id==='home.mat');
   C.splice(i>=0?i+1:(j<0?C.length:j),0,{id:'home.resumes',inst:'home.resumes'});return C};
  const _om=openMat;openMat=function(id){const a=typeof ajOf==='function'&&ajOf(id);if(a&&a.ouvrir==='resumes'){riOuvrirResume(id);return}return _om.apply(this,arguments)};
+})();
+
+/* ======================= COMPOSITIONS PAR LIEN (…/?compo=CODE) =======================
+   Le tableau de bord crée une compo (un sujet + un mode + chrono / date limite) dans Supabase (supabase/compos).
+   L'élève ouvre le lien : l'appli ouvre directement le sujet (même à la première visite, sans passer par l'accueil),
+   il tape son nom (sans compte) et compose ; à la fin sa note part dans le tableau de bord (un envoi par appareil).
+   Modes : « gratuit » (tout ouvert, explications comprises), « reponses » (réponses ouvertes, explications Premium),
+   « normal » (règles Gratuit / Premium habituelles). La gratuité ne vaut que pour le sujet du lien.
+   Chrono écoulé → copie remise ; après la date limite (ou compo close) → « Composition terminée ». */
+(function(){
+ if(typeof RIC==='undefined'||typeof startFil!=='function')return;
+ const LS=RIC.LS,PK='ri_compo_lien',QK='ri_compo_envois',NK='ri_compo_nom';
+ let C=null;                       // compo en cours : {code,titre,mid,k,mode,chrono_min,date_limite,nom,ids,t0,etat}
+ const enFil=()=>!!(C&&C.lance&&FILS&&FILS.mode==='compo'&&FILS.compo===C.code);
+ window.riCompo=()=>C;
+ async function rpc(fn,args){const r=await fetch(RIC.url+'/rest/v1/rpc/'+fn,{method:'POST',headers:{apikey:RIC.key,'Content-Type':'application/json'},body:JSON.stringify(args)});
+  if(!r.ok)throw new Error(r.status+' '+(await r.text()).slice(0,160));return r.json()}
+ const fmtDate=d=>{try{return new Date(d).toLocaleString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}catch(e){return String(d)}};
+
+ /* ---------- accès : la gratuité ne vaut que pour le sujet du lien, pendant la compo ---------- */
+ const _can=RIC.can;RIC.can=function(key){if(C&&C.lance&&C.mode!=='normal'){
+   if(key==='fonction:explications'&&enFil())return C.mode==='gratuit'||RIC.off()||RIC.isPremium();
+   if(key==='matiere:'+C.mid+'/sujet:'+(C.k+1))return true}return _can.apply(this,arguments)};
+ const _qOk=RIC.qOk;RIC.qOk=function(qid){if(C&&C.lance&&C.mode!=='normal'&&C.ids&&C.ids.includes(qid))return true;return _qOk.apply(this,arguments)};
+
+ /* ---------- fenêtre (chargement, présentation, messages) ---------- */
+ function boite(html){let o=$('#ricompo');if(!o){o=document.createElement('div');o.id='ricompo';o.className='pmod';document.body.appendChild(o)}
+  o.innerHTML=`<div class="pbox" style="max-width:440px">${html}</div>`;return o}
+ function fermer(){const o=$('#ricompo');if(o)o.remove()}
+ /* fenêtre « Nouveautés » de l'appli : mise de côté pendant la compo, montrée ensuite (« Voir d'autres sujets ») */
+ let NOTE=null;function cacherNote(){const n=document.getElementById('relNote');if(n&&C){NOTE=n;n.remove()}}
+ const autresBtn=(cls)=>`<button class="btn ${cls||'light'}" data-cp="autres" style="width:100%;margin-top:8px">${T('cp.autres','📚 Voir d’autres sujets')}</button>`;
+ function lier(o){$$('[data-cp="autres"]',o).forEach(b=>b.onclick=voirAutres)}
+ function message(titre,texte,reessayer){const o=boite(`<h3>${titre}</h3><div class="muted" style="margin:6px 0 10px">${texte}</div>${reessayer?`<button class="btn coral" data-cp="re" style="width:100%">${T('cp.re','🔄 Réessayer')}</button>`:''}${autresBtn(reessayer?'light':'coral')}`);
+  lier(o);const r=$('[data-cp="re"]',o);if(r)r.onclick=()=>ouvrir(reessayer)}
+
+ /* ---------- « Voir d'autres sujets » : fin de la compo, accueil de l'appli (ou premier accueil si première visite) ---------- */
+ function voirAutres(){const nom=C&&C.nom;C=null;fermer();if(NOTE){document.body.appendChild(NOTE);NOTE=null}clearInterval(FILT);FILS=null;
+  LS.set(PK,'');if(!S.onb&&nom&&!S.name)S.name=nom;tab('home');window.scrollTo(0,0)}
+ window.riCompoAutres=voirAutres;
+
+ /* ---------- ouvrir un lien ---------- */
+ async function ouvrir(code){C=C||{code};[0,800,1600,3000,5000].forEach(t=>setTimeout(cacherNote,t));boite(`<h3>${T('cp.load','⏳ Ouverture de la composition…')}</h3>`);let d;
+  try{d=await rpc('compo_lire',{p_code:code,p_appareil:RIC.device()})}
+  catch(e){message(T('cp.err.h','📶 Composition indisponible'),T('cp.err','Impossible d’ouvrir la composition. Vérifie ta connexion Internet puis réessaie.'),code);return}
+  if(!d||!d.ok){LS.set(PK,'');
+   if(d&&d.raison==='terminee')message(T('cp.fin.h','⏰ Composition terminée'),(d.titre?'<b>'+esc(d.titre)+'</b><br>':'')+T('cp.fin','Cette composition est close : il n’est plus possible de composer.'));
+   else message(T('cp.inv.h','🔗 Lien invalide'),T('cp.inv','Cette composition n’existe pas. Vérifie le lien reçu.'));return}
+  if(d.deja){LS.set(PK,'');message(T('cp.deja.h','✅ Copie déjà remise'),(d.titre?'<b>'+esc(d.titre)+'</b><br>':'')+T('cp.deja','Tu as déjà remis ta copie pour cette composition sur ce téléphone.'));return}
+  const m=MATI[d.mid];if(!m){message(T('cp.nos.h','📝 Sujet introuvable'),T('cp.nos','Le sujet de cette composition n’est plus dans l’appli. Préviens ton enseignant.'));return}
+  try{const p=typeof plusPret==='function'&&plusPret(d.mid);if(p)await p}catch(e){}
+  const L=sujets(d.mid);let k=-1;
+  if(d.sujet_titre){if(L[d.k]&&sujTitre(d.mid,d.k)===d.sujet_titre)k=d.k;else k=L.findIndex((x,i)=>sujTitre(d.mid,i)===d.sujet_titre)}else if(L[d.k])k=d.k;
+  if(k<0){message(T('cp.nos.h','📝 Sujet introuvable'),T('cp.nos','Le sujet de cette composition n’est plus dans l’appli. Préviens ton enseignant.'));return}
+  const ids=L[k].filter(id=>QI[id]&&!(typeof isNC==='function'&&isNC(QI[id])));
+  const dec=Date.parse(d.maintenant)?Date.parse(d.maintenant)-Date.now():0;
+  C={code:d.code,titre:d.titre||'',mid:d.mid,k,mode:d.mode||'gratuit',chrono_min:d.chrono_min||0,fin:d.date_limite?Date.parse(d.date_limite)-dec:0,ids,sujet:sujTitre(d.mid,k)};
+  presenter()}
+ function presenter(){const m=MATI[C.mid],nom=String(LS.get(NK,'')||S.name||'').trim();
+  const mode=C.mode==='gratuit'?T('cp.m.g','🎁 Composition gratuite : réponses et explications ouvertes'):C.mode==='reponses'?T('cp.m.r','🎁 Réponses gratuites · explications réservées aux élèves Premium'):'';
+  const o=boite(`<div class="muted small" style="font-weight:700;letter-spacing:.04em">${T('cp.lbl','📝 COMPOSITION')}</div><h3 style="margin-top:4px">${esc(C.titre||C.sujet)}</h3>
+   <div class="muted small">${esc(m.emo+' '+(m.short||m.title))}${C.titre?' · '+esc(C.sujet):''}</div>
+   <div class="small" style="margin:10px 0;line-height:1.6">📋 ${T('cp.nq','{n} questions',{n:C.ids.length})}${C.chrono_min?'<br>⏱ '+T('cp.chr','{n} minutes : la copie est remise automatiquement à la fin du temps',{n:C.chrono_min}):''}${C.fin?'<br>📅 '+T('cp.dl','À rendre avant le {d}',{d:esc(fmtDate(C.fin))}):''}${mode?'<br>'+mode:''}</div>
+   <label class="small" style="font-weight:700" for="cpNom">${T('cp.nom','Ton nom et prénom')}</label>
+   <input class="tin" id="cpNom" maxlength="80" autocomplete="name" value="${esc(nom)}" placeholder="${esc(Tx('cp.nom.ph','Ex. Koné Awa'))}" style="width:100%;margin:6px 0 4px">
+   <div class="muted small" style="margin-bottom:10px">${T('cp.info','Ta note sera envoyée à ton enseignant avec ce nom. Une seule copie par téléphone.')}</div>
+   <button class="btn coral" data-cp="go" style="width:100%">${T('cp.go','▶ Commencer la composition')}</button>${autresBtn()}`);
+  lier(o);const inp=$('#cpNom',o);$('[data-cp="go"]',o).onclick=()=>{const v=String(inp.value||'').replace(/\s+/g,' ').trim();if(v.length<2){toast(Tx('cp.nom.vide','Écris ton nom pour commencer'));inp.focus();return}lancer(v)}}
+ function lancer(nom){C.nom=nom;LS.set(NK,nom);LS.set(PK,'');if(C.fin&&C.fin<Date.now()){message(T('cp.fin.h','⏰ Composition terminée'),T('cp.fin','Cette composition est close : il n’est plus possible de composer.'));C=null;return}
+  fermer();C.lance=true;C.t0=Date.now();
+  startFil(C.mid,C.ids.slice(),(C.titre?C.titre+' · ':'')+C.sujet,'compo',C.k,{min:C.chrono_min||0});
+  if(!FILS||FILS.mode!=='compo'){C=null;return}          /* mode « normal » sans accès : l'offre Premium s'est affichée */
+  FILS.compo=C.code;if(C.fin&&(!FILS.end||C.fin<FILS.end))FILS.end=C.fin;
+  if(!FILS.min&&FILS.end)FILS.min=Math.max(1,Math.round((FILS.end-Date.now())/60000));
+  filChrono();render();window.scrollTo(0,0)}
+
+ /* ---------- première visite : le sujet s'ouvre sans passer par l'écran d'accueil ---------- */
+ const _render=render;render=function(){if(C&&C.lance&&VIEW==='fil'&&FILS&&FILS.mode==='compo'&&!S.onb&&SCREENS.fil){const o=SCREENS.fil.onb;SCREENS.fil.onb=1;try{return _render.apply(this,arguments)}finally{SCREENS.fil.onb=o}}return _render.apply(this,arguments)};
+
+ /* ---------- fin : note envoyée, « Voir d'autres sujets » ---------- */
+ function nb(){const ids=FILS.ids.filter(id=>QI[id]&&!(typeof isNC==='function'&&isNC(QI[id])));return{n:ids.length,ok:ids.filter(id=>FILS.ans[id]&&FILS.ans[id].ok&&!FILS.ans[id].pending).length}}
+ function file(){return LS.get(QK,[])}
+ let occupe=0,encore=0;
+ async function vider(){if(occupe){encore=1;return}if(!file().length)return;occupe=1;try{do{encore=0;const L=file(),faits=new Set();
+   for(const x of L){const moi=C&&C.envoi&&C.envoi.p_code===x.p_code;
+    try{const r=await rpc('compo_envoyer',x);faits.add(x.p_code+'|'+x.p_appareil);if(moi)C.etat=r&&r.ok?(r.deja?'deja':'ok'):(r&&r.raison==='terminee'?'terminee':'refus')}
+    catch(e){if(moi)C.etat='err'}}
+   if(faits.size)LS.set(QK,file().filter(x=>!faits.has(x.p_code+'|'+x.p_appareil)))}while(encore&&file().length)}finally{occupe=0}maj()}
+ function envoyer(){const s=nb();const x={p_code:C.code,p_appareil:RIC.device(),p_nom:C.nom,p_bonnes:s.ok,p_total:Math.max(1,s.n),p_duree_s:Math.round((Date.now()-C.t0)/1000)};
+  C.envoi=x;C.etat='envoi';C.note=Math.round(s.ok/Math.max(1,s.n)*200)/10;LS.set(QK,file().filter(y=>y.p_code!==x.p_code).concat([x]));vider()}
+ function maj(){const b=document.getElementById('filBilan');if(b&&enFil())b.innerHTML=filBilanHTML()}
+ window.riCompoRenvoyer=()=>{if(C)C.etat='envoi';maj();vider()};
+ window.riCompoRemettre=()=>{if(!enFil()||FILS.fin)return;const o=$('#riremise');if(o)o.remove();FILS.expire=true;clearInterval(FILT);render()};
+ const _fin=filFin;filFin=function(){const avant=FILS&&FILS.fin;const r=_fin.apply(this,arguments);if(enFil()&&FILS.fin&&!avant&&!C.envoi)envoyer();return r};
+ const _bil=filBilanHTML;filBilanHTML=function(){if(!enFil())return _bil.apply(this,arguments);const h=_bil.apply(this,arguments);
+  if(!FILS.fin)return h+`<div class="center" style="margin-top:10px"><button class="btn light" onclick="riCompoDemanderRemise()">${T('cp.remettre','📤 Remettre ma copie maintenant')}</button></div>`;
+  const s=nb(),sc=Math.round(s.ok/Math.max(1,s.n)*200)/10,e=C.etat;
+  const st=e==='ok'||e==='deja'?`<div class="fb good" style="margin-top:10px"><div class="h">${T('cp.ok','✅ Copie remise : ta note a été envoyée à ton enseignant')}</div></div>`
+   :e==='err'?`<div class="fb bad" style="margin-top:10px"><div class="h">${T('cp.ko','📶 Pas de connexion : ta note sera envoyée dès le retour du réseau')}</div><button class="btn light" style="margin-top:8px" onclick="riCompoRenvoyer()">${T('cp.re','🔄 Réessayer')}</button></div>`
+   :e==='terminee'?`<div class="fb bad" style="margin-top:10px"><div class="h">${T('cp.tard','⏰ Copie remise après la clôture : elle n’a pas été enregistrée')}</div></div>`
+   :e==='refus'?`<div class="fb bad" style="margin-top:10px"><div class="h">${T('cp.refus','⚠️ La copie n’a pas pu être enregistrée')}</div></div>`
+   :`<div class="muted small" style="margin-top:10px">${T('cp.envoi','⏳ Envoi de ta note…')}</div>`;
+  return `<div class="card sf center"><h3>${T('cp.fini','🏁 Composition terminée')}</h3><div class="muted small">${esc(C.nom)}</div><div style="font-size:28px;font-weight:800">${sc}/20</div><div class="muted">${T('fil.score','{ok} bonne(s) réponse(s) sur {n}',{ok:s.ok,n:s.n})}</div>${st}
+   <button class="btn coral" style="margin-top:12px;width:100%" onclick="riCompoAutres()">${T('cp.autres','📚 Voir d’autres sujets')}</button></div>`};
+ window.riCompoDemanderRemise=function(){let o=$('#riremise');if(o)o.remove();o=document.createElement('div');o.id='riremise';o.className='pmod';const s=FILS?nb():{n:0};
+  const r=FILS?Object.keys(FILS.ans).filter(id=>!FILS.ans[id].pending).length:0;
+  o.innerHTML=`<div class="pbox"><h3>${T('cp.rq.h','📤 Remettre ta copie ?')}</h3><div class="muted small">${T('cp.rq','Tu as répondu à {r} question(s) sur {n}. Après la remise, tu ne pourras plus répondre.',{r,n:s.n})}</div>
+   <button class="btn coral" data-rm="ok" style="width:100%;margin-top:12px">${T('cp.rq.ok','📤 Remettre ma copie')}</button><button class="btn light" data-rm="x" style="width:100%;margin-top:8px">${T('cp.rq.x','✍️ Continuer à composer')}</button></div>`;
+  document.body.appendChild(o);$('[data-rm="ok"]',o).onclick=()=>riCompoRemettre();$('[data-rm="x"]',o).onclick=()=>o.remove();o.onclick=e=>{if(e.target===o)o.remove()}};
+ /* « ✕ Quitter » pendant la compo : proposer de remettre la copie ; après la remise : « Voir d'autres sujets » */
+ const _quit=quitFil;quitFil=function(){if(enFil()){if(FILS.fin){voirAutres();return}riCompoDemanderRemise();return}return _quit.apply(this,arguments)};
+ const _rec=filRecommencer;filRecommencer=function(){if(enFil())return;return _rec.apply(this,arguments)};
+
+ /* ---------- au démarrage : lien ?compo=CODE (gardé si la page se recharge avant de commencer) ---------- */
+ let code='';try{code=String(new URLSearchParams(location.search).get('compo')||'').trim().toUpperCase()}catch(e){}
+ if(code&&/^[A-Z0-9]{4,12}$/.test(code)){LS.set(PK,code);try{const u=new URLSearchParams(location.search);u.delete('compo');history.replaceState(null,'',location.pathname+(u.toString()?'?'+u:'')+location.hash)}catch(e){}}
+ else code=String(LS.get(PK,'')||'');
+ (function w(){if(!window.PORTAIL_READY){setTimeout(w,60);return}
+  if((typeof EDITMODE!=='undefined'&&EDITMODE)||window.PORTAIL_EDITOR)return;   /* Studio : pas de compo */
+  setTimeout(vider,1500);addEventListener('online',vider);
+  if(code&&/^[A-Z0-9]{4,12}$/.test(code))ouvrir(code)})();
 })();
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
