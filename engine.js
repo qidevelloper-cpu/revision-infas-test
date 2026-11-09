@@ -3144,7 +3144,7 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
 (function(){const b=BLK['home.sujets'];if(!b||typeof prepChs!=='function')return;
  function prepDe(mid){const l=FICHE_LINKS.find(x=>x.mid===mid&&x.k==='prep');return l?{l,L:prepChs(l.pre)}:{L:[]}}
  window.riPrepDocHTML=function(mid){const P=prepDe(mid);if(!P.L.length)return'';const Q=QBM.xprepade||[];
-  return `<div class="rc-sub" style="margin-top:12px">${T('hsuj.prep','🎓 Prépa examen D.E · par chapitre')}</div><div class="sf">${P.L.map(x=>{const n=Q.filter(q=>q.c===x.i),d=n.filter(q=>S.qs[q.id]).length;
+  return `<div class="rc-sub">${T('hsuj.prep','🎓 Prépa examen D.E · par chapitre')}</div><div class="sf">${P.L.map(x=>{const n=Q.filter(q=>q.c===x.i),d=n.filter(q=>S.qs[q.id]).length;
    return `<div class="li" onclick="go('dech',{id:'xprepade',c:${x.i}})"><span class="em">🎓</span><span class="tx"><b>${esc(x.c.slice(P.l.pre.length))}</b><small>${T('sx.n','{n} questions · {d} déjà faites',{n:n.length,d})}</small></span><span class="go">›</span></div>`}).join('')}</div>`};
  /* Prépa examen D.E en « épreuves corrigées » (Chirurgie : recueil des travaux pratiques) */
  const ATT={};
@@ -3157,7 +3157,8 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
   myMats().filter(m=>m.accueil&&(QBM[m.id]||[]).length).forEach(m=>{const add=riPrepDocHTML(m.id)+riPrepEpreuvesHTML(m.id);if(!add)return;const key=`<b>${esc(m.emo+' '+revTitre(m))}</b>`,i=h.indexOf(key);if(i<0)return;
    const nc=prepDe(m.id).L.length,ne=epreuves(m.id).length,sm=h.indexOf('</small>',i);
    if(sm>0)h=h.slice(0,sm)+(nc?' · '+nc+' '+esc(Tx('hsuj.ch','chapitres Prépa D.E')):'')+(ne?' · '+ne+' '+esc(Tx('hsuj.ep','épreuves Prépa D.E')):'')+h.slice(sm);
-   const j=h.indexOf('</details>',i);if(j>0)h=h.slice(0,j-6)+add+h.slice(j-6)});   /* avant « </div></details> » */
+   const su=h.indexOf('</summary>',i),dv=su>0?h.indexOf('>',h.indexOf('<div',su))+1:0;   /* Prépa D.E d'abord, puis les sujets */
+   if(dv>0)h=h.slice(0,dv)+add+`<div class="rc-sub" style="margin-top:12px">${T('hsuj.sujets','📝 Sujets')}</div>`+h.slice(dv)});
   return h}})();
 
 /* ======================= RÉSUMÉ DE PÉDIATRIE POUR LE D.E : la fiche du PDF à l'identique =======================

@@ -1,10 +1,10 @@
 {
- "v": "429e7bdf2f",
+ "v": "399f9ca90a",
  "date": "2026-10-25",
- "sig": "9e61f122b92fd21588eec8c88ade371b5a931a2d",
+ "sig": "d5fb7843cc32637e5686ca8fa41d1e023f63add8",
  "notes": [
   {
-   "t": "Prépa examen D.E (chapitres et épreuves corrigées) dans les documents de révision · Résumé de Pédiatrie à l’identique du PDF · compositions par lien"
+   "t": "Prépa examen D.E (chapitres et épreuves corrigées) en tête des documents de révision · Résumé de Pédiatrie à l’identique du PDF · compositions par lien"
   }
  ],
  "mats": {
@@ -107,11 +107,11 @@
  },
  "hist": [
   {
-   "v": "429e7bdf2f",
+   "v": "399f9ca90a",
    "date": "2026-10-25",
    "notes": [
     {
-     "t": "Prépa examen D.E (chapitres et épreuves corrigées) dans les documents de révision · Résumé de Pédiatrie à l’identique du PDF · compositions par lien"
+     "t": "Prépa examen D.E (chapitres et épreuves corrigées) en tête des documents de révision · Résumé de Pédiatrie à l’identique du PDF · compositions par lien"
     }
    ]
   },
