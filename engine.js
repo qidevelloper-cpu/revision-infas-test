@@ -2686,6 +2686,23 @@ function actKind(btn){const oc=btn.match(/onclick="([^"]*)"/);const c=oc?oc[1]:'
   const tx=$('.tx b',el)||el;tx.insertAdjacentHTML('beforeend',' <span class="ri-b f">'+esc(Tx('qg.badge','🎁 {n} gratuites',{n:L.length}))+'</span>')})}catch(e){}return x}}
 })();
 
+/* ======================= MÉLANGE QUI GARDE LES CAS CLINIQUES ENSEMBLE =======================
+   « Ordre aléatoire » : les questions indépendantes sont mélangées, mais les questions d'un même cas clinique restent
+   groupées et dans leur ordre. Une question rejoint la précédente si elles partagent l'énoncé du cas (q.s), ou si elle
+   s'y rapporte : « cette femme », « la mère », « votre diagnostic », « Sachant que… », même nom (M. Sangaré)…
+   « Dans l'ordre » : ordre du sujet. */
+const RI_ANA=/(?<![\wÀ-ÿ])(?:cette|ce|cet|ces|sa|son|ses|la même|le même)\s+(?:femme|patiente?|enfant|bébé|nourrisson|nouveau-né|malade|mère|homme|dame|monsieur|madame|fille|garçon|parturiente|accouchée|gestante|cliente|affection|maladie|pathologie|cas|situation|infection|plaie|fracture|diagnostic|traitement|tableau|famille|mari|épouse|grossesse|accouchement|nouveau)(?![\wÀ-ÿ])|(?<![\wÀ-ÿ])(?:la mère|le mari|l[’']époux|l[’']enfant de|le nouveau-né|du nouveau-né|au nouveau-né|même patiente?|votre diagnostic|ce diagnostic|cette affection|votre patient(?:e)?)(?![\wÀ-ÿ])|^(?:sachant que|malheureusement|par ailleurs|toujours|ensuite|puis|chez (?:ce|cette|lui|elle)|dans ce (?:cas|contexte)|quelques (?:jours|heures|mois)|au bout de|après (?:ce|cette|son|sa)|à (?:son|sa) (?:arrivée|admission|sortie)|il |elle |ils |elles |lui |son |sa |ses )/i;
+const RI_NOM=/\b(?:M\.|Mme|Mlle|Monsieur|Madame|Mademoiselle|le petit|la petite|bébé)\s+([A-ZÀ-Ý][\wÀ-ÿ-]{1,})/g;
+function riNoms(t){const o=new Set();String(t||'').replace(RI_NOM,(x,n)=>{o.add(n.toLowerCase());return x});return o}
+function riBlocsCas(ids){const B=[];let cur=null,noms=new Set();
+ ids.forEach(id=>{const q=QI[id],t=q?String(q.q||''):'',sv=q&&q.s?String(q.s):'';let lie=false;
+  if(cur&&q){const p=QI[cur[cur.length-1]];if(sv&&p&&p.s===q.s)lie=true;else if(!sv&&RI_ANA.test(t.trim()))lie=true;else{const n=riNoms(t);for(const x of n)if(noms.has(x)){lie=true;break}}}
+  if(!lie){cur=[id];B.push(cur);noms=riNoms(t+' '+sv)}else{cur.push(id);riNoms(t).forEach(x=>noms.add(x))}});
+ return B}
+function riMelangeCas(ids){return shuffle(riBlocsCas(ids)).flat()}
+function riOrdreNat(ids,mid){const L=(typeof sujets==='function'&&mid)?[].concat(...sujets(mid)):[],pos=new Map();L.forEach((id,i)=>{if(!pos.has(id))pos.set(id,i)});
+ const Q=QBM[mid]||[];Q.forEach((q,i)=>{if(!pos.has(q.id))pos.set(q.id,1e6+i)});return ids.slice().sort((a,b)=>(pos.has(a)?pos.get(a):2e6)-(pos.has(b)?pos.get(b):2e6))}
+
 /* ======================= SUJETS : TITRES « SUJET PREPA D.E n », ORDRE OU ALÉATOIRE AVANT DE COMPOSER =======================
    Placé après le module RI CLOUD : le contrôle Premium passe avant le choix de l'ordre. */
 const SUJ_PREFIXE={xprepade:'SUJET PREPA D.E'};
@@ -2704,7 +2721,8 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
    <button class="btn light" style="width:100%;margin-top:8px" id="riordreX">${T('ui.cancel','Annuler')}</button></div>`;
   document.body.appendChild(o);$('#riordreX',o).onclick=()=>o.remove();o.onclick=e=>{if(e.target===o)o.remove()};
   $$('[data-or]',o).forEach(b=>b.onclick=()=>{const v=b.dataset.or;S.ordre=v;save();o.remove();_st.apply(this,a);
-   if(v==='alea'&&typeof FILS!=='undefined'&&FILS&&FILS.mid===mid&&FILS.k===k&&!FILS.alea){FILS.ids=shuffle(FILS.ids.slice());FILS.alea=1;render()}
+   if(v==='alea'&&typeof FILS!=='undefined'&&FILS&&FILS.mid===mid&&FILS.k===k&&!FILS.alea){FILS.ids=riMelangeCas(FILS.ids.slice());FILS.alea=1;render()}
+   if(v==='alea'&&typeof EX!=='undefined'&&EX&&EX.mid===mid&&EX.k===k&&!EX.cas){EX.ids=riMelangeCas(L.filter(id=>EX.ids.includes(id)));EX.cas=1;render()}
    if(v==='ordre'&&typeof EX!=='undefined'&&EX&&EX.mid===mid&&EX.k===k&&!EX.ordre){const ord=L.filter(id=>EX.ids.includes(id));EX.ids=ord;EX.ordre=1;render()}})};
 })();
 
@@ -3197,7 +3215,8 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
   document.body.appendChild(o);const F=FILS;
   $('#riordreX',o).onclick=()=>{o.remove();if(FILS===F)quitFil()};
   $$('[data-or]',o).forEach(b=>b.onclick=()=>{const v=b.dataset.or;S.ordre=v;save();o.remove();
-   if(v==='alea'&&FILS===F&&!Object.keys(F.ans||{}).length){F.ids=shuffle(F.ids.slice());F.alea=1;render();window.scrollTo(0,0)}})}
+   if(FILS!==F||Object.keys(F.ans||{}).length)return;const nat=riOrdreNat(F.ids,F.mid);
+   if(v==='alea'){F.ids=riMelangeCas(nat);F.alea=1}else F.ids=nat;render();window.scrollTo(0,0)})}
  const _st=startSujet;startSujet=function(mid,k){const r=_st.apply(this,arguments);if(CN[mid]&&VIEW==='fil'&&FILS&&FILS.mid===mid)choisir();return r};
  if(typeof window.riFilAppli==='function'){const _fa=window.riFilAppli;window.riFilAppli=function(){const cn=!!(ctx&&CN[ctx.id]);const r=_fa.apply(this,arguments);try{if(r&&cn&&FILS&&FILS.mode==='app')setTimeout(choisir,50)}catch(e){}return r}}
 })();

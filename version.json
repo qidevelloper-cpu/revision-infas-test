@@ -1,10 +1,14 @@
 {
- "v": "a82964c9e6",
+ "v": "f7af2c27d5",
  "date": "2026-10-25",
- "sig": "73870e607bc38478ade567b7469255b4a0a73312",
+ "sig": "83665cbc5f8df7709b5021d3e04856d8a9d7b70c",
  "notes": [
   {
-   "t": "Correction Nationale : choix « dans l’ordre » ou « aléatoire » avant de composer · documents de révision réorganisés · Résumé de Pédiatrie à l’identique du PDF"
+   "t": "Sujets : « aléatoire » garde les cas cliniques groupés et dans l’ordre · énoncés de cas ajoutés (D.E blanc 2026) · ordre ou aléatoire dans la Correction Nationale"
+  },
+  {
+   "t": "🔄 Cours mis à jour : Correction Nationale 2025 — Examens blancs infirmier",
+   "m": "xmvkq4zed"
   }
  ],
  "mats": {
@@ -42,7 +46,7 @@
   },
   "xmvkq4zed": {
    "t": "Correction Nationale 2025 — Examens blancs infirmier",
-   "h": "ecd8089f1a0f550609a5db35be9288bd6bb6ea6b"
+   "h": "0c6615fcd06390c582f3e6eae3b848d886498bfc"
   },
   "xmvkq53re": {
    "t": "Pharmacologie",
@@ -107,11 +111,15 @@
  },
  "hist": [
   {
-   "v": "a82964c9e6",
+   "v": "f7af2c27d5",
    "date": "2026-10-25",
    "notes": [
     {
-     "t": "Correction Nationale : choix « dans l’ordre » ou « aléatoire » avant de composer · documents de révision réorganisés · Résumé de Pédiatrie à l’identique du PDF"
+     "t": "Sujets : « aléatoire » garde les cas cliniques groupés et dans l’ordre · énoncés de cas ajoutés (D.E blanc 2026) · ordre ou aléatoire dans la Correction Nationale"
+    },
+    {
+     "t": "🔄 Cours mis à jour : Correction Nationale 2025 — Examens blancs infirmier",
+     "m": "xmvkq4zed"
     }
    ]
   },
