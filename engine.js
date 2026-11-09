@@ -3153,13 +3153,21 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  window.riPrepEpreuvesHTML=function(mid){const L=epreuves(mid);if(!L.length)return'';const jm=jsq(mid);
   return `<div class="rc-sub" style="margin-top:12px">${T('hsuj.prep2','🎓 Prépa examen D.E · épreuves corrigées')}</div>`+L.map((x,k)=>{let seen=0,ok=0;(x.ids||[]).forEach(id=>{const r=S.qs[id];if(r){seen++;if(r.l)ok++}});
    return `<div class="suj sf" onclick="startFil('${jm}',plusOf('${jm}').prep.sujets[${k}].ids,'${jsq(x.t)}','prep')"><div class="no"><small>${esc(Tx('pp.no','ÉPREUVE'))}</small>${k+1}</div><div class="tx"><b>${esc(x.t)}</b><small>${T('hsuj.s','{n} questions · {seen} faites · ✅ {ok}',{n:(x.q||x.ids||[]).length,seen,ok})}</small></div></div>`}).join('')};
+ /* En tête de chaque document : Prépa examen D.E (chapitres / épreuves) et sujets de révision ajoutés ; puis « 📝 Sujets » */
  const _h=b.html;b.html=function(){let h=_h.apply(this,arguments);if(!h)return h;
-  myMats().filter(m=>m.accueil&&(QBM[m.id]||[]).length).forEach(m=>{const add=riPrepDocHTML(m.id)+riPrepEpreuvesHTML(m.id);if(!add)return;const key=`<b>${esc(m.emo+' '+revTitre(m))}</b>`,i=h.indexOf(key);if(i<0)return;
-   const nc=prepDe(m.id).L.length,ne=epreuves(m.id).length,sm=h.indexOf('</small>',i);
-   if(sm>0)h=h.slice(0,sm)+(nc?' · '+nc+' '+esc(Tx('hsuj.ch','chapitres Prépa D.E')):'')+(ne?' · '+ne+' '+esc(Tx('hsuj.ep','épreuves Prépa D.E')):'')+h.slice(sm);
-   const su=h.indexOf('</summary>',i),dv=su>0?h.indexOf('>',h.indexOf('<div',su))+1:0;   /* Prépa D.E d'abord, puis les sujets */
-   if(dv>0)h=h.slice(0,dv)+add+`<div class="rc-sub" style="margin-top:12px">${T('hsuj.sujets','📝 Sujets')}</div>`+h.slice(dv)});
-  return h}})();
+  const W=document.createElement('div');W.innerHTML=h;let ch=false;
+  myMats().filter(m=>m.accueil&&(QBM[m.id]||[]).length).forEach(m=>{const D=[...W.querySelectorAll('details.hsuj')].find(d=>{const x=d.querySelector('summary b');return x&&x.textContent===m.emo+' '+revTitre(m)});if(!D)return;
+   const box=D.querySelector(':scope>div');if(!box)return;const L=sujets(m.id),rx=new RegExp("startSujet\\('"+m.id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"',(\\d+)\\)");
+   const revRows=[...box.querySelectorAll('.suj')].filter(r=>{const k=(String(r.getAttribute('onclick')||'').match(rx)||[])[1];return k!=null&&L[+k]&&L[+k].rev});
+   const prep=riPrepDocHTML(m.id)+riPrepEpreuvesHTML(m.id);if(!prep&&!revRows.length)return;ch=true;
+   const top=document.createElement('div');top.innerHTML=prep;
+   if(revRows.length){const t0=String(sujTitre(m.id,L.findIndex(x=>x.rev))||'').replace(/\s+sujet\s+\d+\s*$/i,'');const hd=document.createElement('div');hd.className='rc-sub';if(prep)hd.style.marginTop='12px';hd.textContent='📘 '+(t0||Tx('hsuj.rev','Sujets de révision'));top.appendChild(hd);revRows.forEach((r,n)=>{const no=r.querySelector('.no');if(no)no.innerHTML=`<small>${esc(Tx('sujets.no','SUJET'))}</small>${n+1}`;top.appendChild(r)})}   /* numérotés 1, 2, 3… comme leur titre */
+   const hs=document.createElement('div');hs.className='rc-sub';hs.style.marginTop='12px';hs.innerHTML=T('hsuj.sujets','📝 Sujets');
+   if(box.querySelector('.suj'))box.insertBefore(hs,box.firstChild);while(top.lastChild)box.insertBefore(top.lastChild,box.firstChild);   /* insérés à l'envers en tête : l'ordre est gardé */
+   const sm=D.querySelector('summary small'),nc=prepDe(m.id).L.length,ne=epreuves(m.id).length;
+   if(sm&&revRows.length)sm.innerHTML=sm.innerHTML.replace(L.length+' ',(L.length-revRows.length)+' ');
+   if(sm)sm.innerHTML+=(nc?' · '+nc+' '+esc(Tx('hsuj.ch','chapitres Prépa D.E')):'')+(ne?' · '+ne+' '+esc(Tx('hsuj.ep','épreuves Prépa D.E')):'')+(revRows.length?' · '+revRows.length+' '+esc(Tx('hsuj.nr','de révision')):'')});
+  return ch?W.innerHTML:h}})();
 
 /* ======================= RÉSUMÉ DE PÉDIATRIE POUR LE D.E : la fiche du PDF à l'identique =======================
    Pour les fiches tirées d'un PDF (ajout « xresped »), chaque chapitre montre d'abord la ou les pages du PDF
@@ -3174,5 +3182,24 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
   if(c.imgs.length)h+=`<h4>${esc(Tx('resumes.pdf','📄 La fiche du PDF'))}</h4>`+c.imgs.map(x=>`<figure class="rpdf" style="margin:0 0 10px"><img loading="lazy" decoding="async" src="${imgSrc(x[0])}" alt="${esc(x[1])}" loading="lazy" style="width:100%;height:auto;border:1px solid var(--line,#ddd);border-radius:10px;background:#fff" onclick="zoomImg('${x[0]}','${jsq(x[1])}')"><figcaption class="muted small">${esc(x[1])} · ${esc(Tx('resumes.zoom','touche pour agrandir'))}</figcaption></figure>`).join('');
   if(c.pts.length)h+=`<details style="margin-top:6px"><summary><b>${esc(Tx('resumes.txt','📝 Texte de la fiche'))}</b></summary><ul class="rpts">${c.pts.map(p=>`<li>${p[0]?`<b>${esc(p[0])}</b><br>`:''}${esc(p[1])}</li>`).join('')}</ul>${c.tabs.map(t=>tableHTML(t)).join('')}</details>`;
   return h||_r.apply(this,arguments)}})();
+
+/* ======================= CORRECTION NATIONALE : ORDRE OU ALÉATOIRE AVANT DE COMPOSER =======================
+   Sujets des examens blancs (arbre matière › antenne › année, sujets J, et lancement depuis l'appli complète) :
+   le sujet s'ouvre, puis une fenêtre demande « Dans l'ordre » ou « Ordre aléatoire » avant la première réponse. */
+(function(){const CN={xmvkq4zed:1};
+ function choisir(){if(typeof FILS==='undefined'||!FILS||FILS.mode==='compo'||FILS.alea)return;const n=FILS.ids.length;if(n<2)return;
+  let o=$('#riordre');if(o)o.remove();o=document.createElement('div');o.id='riordre';o.className='pmod';const pref=S.ordre==='alea'?'alea':'ordre';
+  o.innerHTML=`<div class="pbox"><h3>📝 ${esc(FILS.label||'')}</h3><div class="muted small">${n} ${esc(Tx('or.q','questions'))}</div>
+   <div class="small" style="font-weight:700;margin:12px 0 6px">${T('or.h','Comment veux-tu composer ?')}</div>
+   <button class="btn ${pref==='ordre'?'coral':'light'}" data-or="ordre" style="width:100%">${T('or.ordre','🔢 Dans l’ordre')}</button>
+   <button class="btn ${pref==='alea'?'coral':'light'}" data-or="alea" style="width:100%;margin-top:8px">${T('or.alea','🔀 Ordre aléatoire')}</button>
+   <button class="btn light" style="width:100%;margin-top:8px" id="riordreX">${T('ui.cancel','Annuler')}</button></div>`;
+  document.body.appendChild(o);const F=FILS;
+  $('#riordreX',o).onclick=()=>{o.remove();if(FILS===F)quitFil()};
+  $$('[data-or]',o).forEach(b=>b.onclick=()=>{const v=b.dataset.or;S.ordre=v;save();o.remove();
+   if(v==='alea'&&FILS===F&&!Object.keys(F.ans||{}).length){F.ids=shuffle(F.ids.slice());F.alea=1;render();window.scrollTo(0,0)}})}
+ const _st=startSujet;startSujet=function(mid,k){const r=_st.apply(this,arguments);if(CN[mid]&&VIEW==='fil'&&FILS&&FILS.mid===mid)choisir();return r};
+ if(typeof window.riFilAppli==='function'){const _fa=window.riFilAppli;window.riFilAppli=function(){const cn=!!(ctx&&CN[ctx.id]);const r=_fa.apply(this,arguments);try{if(r&&cn&&FILS&&FILS.mode==='app')setTimeout(choisir,50)}catch(e){}return r}}
+})();
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

@@ -1,10 +1,10 @@
 {
- "v": "399f9ca90a",
+ "v": "a82964c9e6",
  "date": "2026-10-25",
- "sig": "d5fb7843cc32637e5686ca8fa41d1e023f63add8",
+ "sig": "73870e607bc38478ade567b7469255b4a0a73312",
  "notes": [
   {
-   "t": "Prépa examen D.E (chapitres et épreuves corrigées) en tête des documents de révision · Résumé de Pédiatrie à l’identique du PDF · compositions par lien"
+   "t": "Correction Nationale : choix « dans l’ordre » ou « aléatoire » avant de composer · documents de révision réorganisés · Résumé de Pédiatrie à l’identique du PDF"
   }
  ],
  "mats": {
@@ -107,11 +107,11 @@
  },
  "hist": [
   {
-   "v": "399f9ca90a",
+   "v": "a82964c9e6",
    "date": "2026-10-25",
    "notes": [
     {
-     "t": "Prépa examen D.E (chapitres et épreuves corrigées) en tête des documents de révision · Résumé de Pédiatrie à l’identique du PDF · compositions par lien"
+     "t": "Correction Nationale : choix « dans l’ordre » ou « aléatoire » avant de composer · documents de révision réorganisés · Résumé de Pédiatrie à l’identique du PDF"
     }
    ]
   },
