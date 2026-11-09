@@ -1,10 +1,10 @@
 {
- "v": "b379443e95",
+ "v": "f2976b6ab7",
  "date": "2026-10-25",
- "sig": "b1c364be3ed59c49fa76216f04c73cf021d5f6ca",
+ "sig": "609d7bc11275b0b98a3956f15108136311778441",
  "notes": [
   {
-   "t": "Révision de gynécologie : 8 nouveaux sujets (360 questions) · rubrique « DOCUMENT DE REVISION INFAS » · Préparation D.E (J) : 9 nouveaux sujets"
+   "t": "Nouveau : rubrique « RÉSUMÉS POUR LE D.E » avec le Résumé de Pédiatrie (17 fiches) · Révision de gynécologie · Préparation D.E (J)"
   },
   {
    "t": "🔄 Cours mis à jour : Gynéco-Obstétrique",
@@ -13,6 +13,10 @@
   {
    "t": "🔄 Cours mis à jour : Correction Nationale 2025 — Examens blancs infirmier",
    "m": "xmvkq4zed"
+  },
+  {
+   "t": "📘 Nouveau cours : Résumé de Pédiatrie pour le D.E",
+   "m": "xresped"
   }
  ],
  "mats": {
@@ -107,15 +111,19 @@
   "xpedexo": {
    "t": "Pédiatrie — Exercices & Corrigés",
    "h": "405e714fab0a2c0dfb3775e8fdb55a16410948f6"
+  },
+  "xresped": {
+   "t": "Résumé de Pédiatrie pour le D.E",
+   "h": "48d723b3672280c8850b829383265491cc34a38c"
   }
  },
  "hist": [
   {
-   "v": "b379443e95",
+   "v": "f2976b6ab7",
    "date": "2026-10-25",
    "notes": [
     {
-     "t": "Révision de gynécologie : 8 nouveaux sujets (360 questions) · rubrique « DOCUMENT DE REVISION INFAS » · Préparation D.E (J) : 9 nouveaux sujets"
+     "t": "Nouveau : rubrique « RÉSUMÉS POUR LE D.E » avec le Résumé de Pédiatrie (17 fiches) · Révision de gynécologie · Préparation D.E (J)"
     },
     {
      "t": "🔄 Cours mis à jour : Gynéco-Obstétrique",
@@ -124,6 +132,10 @@
     {
      "t": "🔄 Cours mis à jour : Correction Nationale 2025 — Examens blancs infirmier",
      "m": "xmvkq4zed"
+    },
+    {
+     "t": "📘 Nouveau cours : Résumé de Pédiatrie pour le D.E",
+     "m": "xresped"
     }
    ]
   },

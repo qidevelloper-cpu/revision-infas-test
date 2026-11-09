@@ -2257,7 +2257,7 @@ const RIC={
 
  function grpOf(mid){try{for(const g of groups())for(const s of g.subs)if(s.mats.includes(mid))return g.id}catch(e){}return null}
  function baseRule(){const R=RIC.cfg.regles;if(S&&S.fil&&S.niv){const k='niveau:'+filBase(S.fil)+'-'+S.niv;if(R[k])return R[k].acces}return RIC.cfg.defaut}
- function matRule(mid){const R=RIC.cfg.regles;if(R['matiere:'+mid])return R['matiere:'+mid].acces;const su=typeof ajSuit==='function'&&ajSuit(mid);if(su)return matRule(su);const g=grpOf(mid);if(g&&R['rubrique:'+g])return R['rubrique:'+g].acces;return baseRule()}
+ function matRule(mid){const R=RIC.cfg.regles;if(R['matiere:'+mid])return R['matiere:'+mid].acces;const aj=typeof ajOf==='function'&&ajOf(mid);if(aj&&aj.acces)return aj.acces;const su=typeof ajSuit==='function'&&ajSuit(mid);if(su)return matRule(su);const g=grpOf(mid);if(g&&R['rubrique:'+g])return R['rubrique:'+g].acces;return baseRule()}
  function quota(mid){const R=RIC.cfg.regles,r=R['matiere:'+mid];if(r&&r.quotaGratuit!=null)return r.quotaGratuit;const su=!r&&typeof ajSuit==='function'&&ajSuit(mid);if(su)return quota(su);const g=grpOf(mid),rg=g&&R['rubrique:'+g];if(rg&&rg.quotaGratuit!=null)return rg.quotaGratuit;return 0}
  /* effective('matiere:vih/sujet:3') → 'gratuit' | 'premium' | 'masque' (la règle la plus précise l'emporte) */
  function effective(key){const R=RIC.cfg.regles;
@@ -2959,6 +2959,26 @@ const DOCREV={};
  /* « Faire les quiz » : titre du sujet de révision à la place de « Sujet 19 » */
  const B0=BLK['sujets.list'];if(B0){const _h=B0.html;B0.html=function(){let h=_h.apply(this,arguments);const mid=ctx&&ctx.id;if(!mid||!DOCREV[mid]||(S.sujMode||'suj')!=='suj')return h;
   sujets(mid).forEach((L,k)=>{if(L.rev)h=h.replace(new RegExp('Sujet '+(k+1)+' · '),esc(sujTitre(mid,k))+' · ')});return h}}
+})();
+
+/* ======================= RUBRIQUE « RÉSUMÉS POUR LE D.E » (accueil) =======================
+   Contenus ajoutés (ajouts/<id>.json) avec rubrique:'resumes-de' : résumés natifs (fiches par chapitre) ouverts directement
+   (ouvrir:'resumes'). Accès : règle du tableau de bord sur le cours, sinon champ « acces » de la fiche (ex. 'premium'). */
+function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+id+'/resumes';
+ if(typeof RIC!=='undefined'&&RIC.hidden&&RIC.hidden('matiere:'+id)){toast(Tx('aj.off','Ce contenu n’est pas disponible.'));return}
+ if(typeof RIC!=='undefined'&&RIC.can&&!RIC.can(key)){if(RIC.paywall)RIC.paywall(key,m.title+' · Premium');return}
+ S.lastMat=id;save();go('resumes',{id})}
+(function(){if(typeof ajouts!=='function'||typeof B!=='function')return;
+ const liste=()=>{const mine=new Set(myMats().map(m=>m.id));return ajouts().filter(a=>a.rubrique==='resumes-de'&&MATI[a.mat.id]&&mine.has(a.mat.id)&&!(typeof RIC!=='undefined'&&RIC.hidden&&RIC.hidden('matiere:'+a.mat.id)))};
+ B('home.resumes','Résumés pour le D.E (accueil)',()=>{const L=liste();if(!L.length)return'';
+  return `<div class="secT">${T('hres.h','📋 RÉSUMÉS POUR LE D.E')}<span class="ln"></span></div>`+L.map(a=>{const m=MATI[a.mat.id],n=(m.ch||[]).length,
+   lock=typeof RIC!=='undefined'&&RIC.can&&!RIC.can('matiere:'+m.id+'/resumes');
+   return `<div class="card sf li hres" onclick="riOuvrirResume('${jsq(m.id)}')" style="cursor:pointer;display:flex;align-items:center;gap:12px"><span class="em" style="font-size:26px">${esc(m.emo||'📋')}</span><span class="tx" style="flex:1;min-width:0"><b>${esc(m.title)}</b>${lock?' <span class="ri-b p">🔒 Premium</span>':''}<small style="display:block">${esc(m.sub||Tx('hres.n','{n} fiches',{n}))}</small></span><span class="go">›</span></div>`}).join('')});
+ const placer=L=>{if(L.includes('home.resumes'))return L;const i=L.indexOf('home.sujets'),j=L.indexOf('home.mat');L.splice(i>=0?i+1:(j<0?L.length:j),0,'home.resumes');return L};
+ placer(SCREENS.home.blocks);
+ const _lo=layoutOf;layoutOf=function(sc){const L=_lo(sc);if(sc!=='home'||!Array.isArray(L)||L.some(b=>b.id==='home.resumes'))return L;const C=L.slice(),i=C.findIndex(b=>b.id==='home.sujets'),j=C.findIndex(b=>b.id==='home.mat');
+  C.splice(i>=0?i+1:(j<0?C.length:j),0,{id:'home.resumes',inst:'home.resumes'});return C};
+ const _om=openMat;openMat=function(id){const a=typeof ajOf==='function'&&ajOf(id);if(a&&a.ouvrir==='resumes'){riOuvrirResume(id);return}return _om.apply(this,arguments)};
 })();
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
