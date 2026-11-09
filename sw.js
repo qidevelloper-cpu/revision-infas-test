@@ -23,8 +23,8 @@ self.addEventListener('activate',e=>{e.waitUntil((async()=>{for(const k of await
 self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);
  if(u.hostname==='fonts.googleapis.com'||u.hostname==='fonts.gstatic.com'){e.respondWith(caches.open(FO).then(c=>c.match(r).then(h=>h||fetch(r).then(x=>{if(x.ok||x.type==='opaque')c.put(r,x.clone());return x}))));return}
  if(u.origin!==location.origin)return;
- /* application unifiée (dossier unifiee/, publié à part) : toujours le réseau, jamais le portail ni le cache du portail */
- if(/\/unifiee\//.test(u.pathname))return;
+ /* application unifiée (dossier unifiee/) et tableau de bord du site test (tableau-de-bord/), publiés à part : toujours le réseau, jamais le portail ni le cache du portail */
+ if(/\/(unifiee|tableau-de-bord)\//.test(u.pathname))return;
  if(r.mode==='navigate'){e.respondWith(caches.open(CC).then(c=>c.match('./').then(h=>h||c.match('index.html')).then(h=>h||fetch(r).then(x=>{if(x.ok)c.put('./',x.clone());return x}))).then(propre).catch(()=>fetch(r)));return}
  const cn=u.search.indexOf('v=')>=0?FC:CC;
  e.respondWith(caches.open(cn).then(c=>c.match(r).then(h=>h||fetch(r).then(x=>{if(x.ok)c.put(r,x.clone());return x}))))});
