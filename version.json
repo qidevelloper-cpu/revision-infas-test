@@ -1,10 +1,10 @@
 {
- "v": "8c48d5c3b0",
+ "v": "9b7ed6c677",
  "date": "2026-10-25",
- "sig": "2b95447bb481baf66d36122ab8cf45311078d822",
+ "sig": "2c2fb39e3626c3af2f06c2daa1b203f857af6c28",
  "notes": [
   {
-   "t": "Heures de connexion"
+   "t": "Nouvelle mise à jour"
   }
  ],
  "mats": {
@@ -107,6 +107,24 @@
  },
  "hist": [
   {
+   "v": "9b7ed6c677",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Nouvelle mise à jour"
+    }
+   ]
+  },
+  {
+   "v": "d647dfda2f",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Nouvelle mise à jour"
+    }
+   ]
+  },
+  {
    "v": "8c48d5c3b0",
    "date": "2026-10-25",
    "notes": [
@@ -203,32 +221,6 @@
    "notes": [
     {
      "t": "Codes d'activation, sujets Prépa D.E (ordre ou aléatoire), reprise d'un sujet, questions gratuites, images dans les cours, nouvelle calculatrice"
-    }
-   ]
-  },
-  {
-   "v": "f4c871c322",
-   "date": "2026-10-25",
-   "notes": [
-    {
-     "t": "✍️ Pédiatrie — Exercices & Corrigés : 779 questions en quiz, 59 fiches et flashcards"
-    },
-    {
-     "t": "🔄 Cours mis à jour : Pédiatrie — Exercices & Corrigés",
-     "m": "xpedexo"
-    }
-   ]
-  },
-  {
-   "v": "3a07caafa9",
-   "date": "2026-10-25",
-   "notes": [
-    {
-     "t": "✍️ Nouveau : Pédiatrie — Exercices & Corrigés (779 questions expliquées)"
-    },
-    {
-     "t": "📘 Nouveau cours : Pédiatrie — Exercices & Corrigés",
-     "m": "xpedexo"
     }
    ]
   }
