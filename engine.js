@@ -3347,4 +3347,25 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  let vu=null;setInterval(()=>{try{const k=nomTape()+'|'+(S.fil||'')+'|'+(S.niv||'');if(vu===null){vu=k;return}if(k!==vu){vu=k;localStorage.removeItem('ri_cx');cx()}}catch(e){}},4000);
 })();
 
+/* =========================================================
+   NOM OBLIGATOIRE · un élève qui a fini l'accueil sans nom doit le taper (il est envoyé au tableau de bord)
+   ========================================================= */
+(function(){
+ let AUCOMPO=false;try{const n=(performance.getEntriesByType('navigation')[0]||{}).name||location.href;AUCOMPO=/[?&]compo=/.test(n)}catch(e){}
+ function besoin(){try{return !!(window.PORTAIL_READY&&S&&S.onb&&!String(S.name||'').trim()&&!(typeof EDITMODE!=='undefined'&&EDITMODE)&&!AUCOMPO&&!/[?&]compo=/.test(location.search)&&!document.getElementById('rinom'))}catch(e){return false}}
+ function demander(){if(!besoin())return;const o=document.createElement('div');o.id='rinom';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');
+  o.style.cssText='position:fixed;inset:0;z-index:9990;background:rgba(10,20,18,.6);display:flex;align-items:center;justify-content:center;padding:18px';
+  o.innerHTML=`<div style="background:var(--card,#fff);color:var(--ink,#16231F);width:100%;max-width:420px;border-radius:24px;box-shadow:0 18px 50px rgba(0,0,0,.3);padding:24px 20px 18px">
+   <div style="font-size:40px;text-align:center;line-height:1">👋</div><div style="font-size:21px;font-weight:900;text-align:center;margin-top:8px">${esc(Tx('nomob.t','Comment t’appelles-tu ?'))}</div>
+   <div style="font-size:14.5px;opacity:.8;text-align:center;margin-top:4px">${esc(Tx('nomob.s','Écris ton prénom et ton nom pour continuer.'))}</div>
+   <input id="rinomI" type="text" autocomplete="name" maxlength="60" placeholder="${esc(Tx('nomob.ph','Prénom et nom'))}" style="width:100%;margin-top:16px;min-height:50px;border-radius:14px;border:2px solid var(--line,#d9dfe7);padding:0 14px;font:inherit;font-size:17px;background:var(--card,#fff);color:inherit">
+   <button id="rinomOk" style="width:100%;margin-top:12px;min-height:52px;border-radius:16px;background:var(--coral,#E8772E);color:#fff;font-weight:800;font-size:17px">${esc(Tx('nomob.ok','Continuer'))}</button></div>`;
+  document.body.appendChild(o);const i=document.getElementById('rinomI');setTimeout(()=>{try{i.focus()}catch(e){}},200);
+  const ok=()=>{const v=i.value.replace(/\s+/g,' ').trim();if(v.length<2){toast(Tx('toast.name','Écris ton nom pour continuer'));i.focus();return}
+   S.name=v.slice(0,60);save();o.remove();try{render()}catch(e){}try{localStorage.removeItem('ri_cx');window.riConnexion&&window.riConnexion()}catch(e){}toast(Tx('toast.welcome','Bienvenue {name} 🎉',{name:S.name}))};
+  document.getElementById('rinomOk').onclick=ok;i.onkeydown=e=>{if(e.key==='Enter')ok()}}
+ window.riNomObligatoire=demander;
+ setInterval(demander,3000);
+})();
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

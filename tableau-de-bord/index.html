@@ -1261,12 +1261,14 @@ function bindLive(){
 setInterval(()=>{ if(DB && page==='overview' && !document.hidden) loadPresence(); }, 30e3);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && DB && page==='overview' && Date.now()-PRES_T>20e3) loadPresence(); });
 /* ---------- Heures de connexion : traces « connexion » / « ouverture » envoyées par l'appli (fonction SQL connexions) ---------- */
-let CNX = null;
+let CNX = null, SCX = null;
 async function loadCnx(){
   if(MODE!=='supabase' || !SB){ CNX = null; return; }
   try{ const {data,error} = await SB.rpc('connexions', {p_jours:30});
     CNX = error ? {err: /connexions|function|PGRST/i.test(String(error.message||'')) ? 'sql' : 'reseau'} : {L: cnxPrep(data||[])}; }
   catch(e){ CNX = {err:'reseau'}; }
+  try{ const {data,error} = await SB.rpc('eleves_sans_compte', {p_jours:30}); SCX = error ? {err: /eleves_sans_compte|function|PGRST/i.test(String(error.message||'')) ? 'sql' : 'reseau'} : {L: Array.isArray(data)?data:[]}; }
+  catch(e){ SCX = {err:'reseau'}; }
 }
 function cnxPrep(rows){ // une connexion par appareil et par tranche de 10 minutes ; rattachée à l'élève par son compte ou son appareil
   const L = rows.filter(x=>x && x.t).sort((a,b)=>new Date(b.t)-new Date(a.t)), last = {}, out = [];
@@ -1299,22 +1301,38 @@ function cnxCard(){
     :`<p class="muted" style="margin:8px 0 0">Aucune connexion reçue sur 30 jours. Les heures s’affichent dès que les élèves ouvrent l’appli mise à jour.</p>`}
   </div>`;
 }
+function scLignes(){ // une ligne par appareil sans compte : fonction SQL eleves_sans_compte, sinon les connexions
+  const lie = a => DB.profiles.find(p=>(p.appareils||[]).some(x=>String(x).includes(a)));
+  if(SCX && SCX.L) return SCX.L.filter(g=>g.a && !(g.c && DB.profiles.some(p=>p.auth_id===g.c)) && !lie(g.a)).map(g=>({a:g.a, m:g.m||'', f:g.f||'', n:g.n||'', t:g.derniere, nb:+g.nbc||0, nq:+g.nbq||0, quiz:Array.isArray(g.quiz)?g.quiz:[], sql:true}));
+  const X = cnxData(); if(X.err || X.demo || !X.L) return [];
+  const G = {}; X.L.filter(x=>!x.pid && x.a).forEach(x=>{ const g = G[x.a] = G[x.a] || {a:x.a, m:'', f:'', n:'', t:x.t, nb:0, nq:null, quiz:[]}; g.nb++; if(!g.m && x.m) g.m = x.m; if(!g.f && x.f){ g.f = x.f; g.n = x.n||''; } });
+  return Object.values(G);
+}
+function scSujet(q){ const id = q.mat; let lab = matName(id); const k = q.k!=null && q.k!=='' ? +q.k : null;
+  if(k!=null && q.mode && /sujet|compo|corr/i.test(q.mode)){ for(const r of CATALOGUE) for(const m of r.matieres) if(m.id===id && Array.isArray(m.sujets) && m.sujets[k]) lab += ' · '+m.sujets[k][0]; }
+  return lab; }
+const scNote = q => { const n = +q.n||0, ok = +q.ok||0; return n ? Math.round(ok/n*200)/10 : null; };
 function sansCompteCard(){
-  const X = cnxData(); if(X.err || X.demo || !X.L) return '';
-  const G = {}; X.L.filter(x=>!x.pid && x.a).forEach(x=>{ const g = G[x.a] = G[x.a] || {a:x.a, m:'', f:'', n:'', t:x.t, nb:0}; g.nb++; if(!g.m && x.m) g.m = x.m; if(!g.f && x.f){ g.f = x.f; g.n = x.n||''; } });
-  const q = nrmTxt((UI.scq||'').trim()), L0 = Object.values(G), L = L0.filter(g=>!q || nrmTxt(`${g.m} ${g.f} ${g.n}`).includes(q)).sort((a,b)=>(!!b.m - !!a.m) || new Date(b.t)-new Date(a.t)), nm = L0.filter(g=>g.m).length;
-  if(!L0.length) return '';
-  const aff = UI.scAll ? L.length : 15;
+  const L0 = scLignes().filter(g=>String(g.m||'').trim()); if(!L0.length && !(SCX && SCX.err==='sql')) return ''; // seulement les élèves qui ont tapé leur nom
+  const q = nrmTxt((UI.scq||'').trim()), L = L0.filter(g=>!q || nrmTxt(`${g.m} ${g.f} ${g.n}`).includes(q)).sort((a,b)=>new Date(b.t)-new Date(a.t));
+  const aff = UI.scAll ? L.length : 15, sql = L0.some(g=>g.sql), ouv = UI.scOpen = UI.scOpen || new Set();
+  const moy = g=>{ const N = g.quiz.map(scNote).filter(x=>x!=null); return N.length ? Math.round(N.reduce((a,b)=>a+b,0)/N.length*10)/10 : null; };
+  const ligne = g=>{ const mo = moy(g), o = ouv.has(g.a);
+    return `<tr data-sca="${esc(g.a)}" style="cursor:${g.quiz.length?'pointer':'default'}"><td><b>${esc(g.m)}</b></td><td>${esc(g.f||'—')}</td><td>${esc(g.n||'—')}</td><td style="white-space:nowrap">${dhfr(g.t)}</td><td>${fmt(g.nb)}</td>
+      <td style="white-space:nowrap">${g.nq==null?'<span class="muted">—</span>':g.nq?`${g.quiz.length?(o?'▾ ':'▸ '):''}<b>${fmt(g.nq)}</b>${mo!=null?` · moy. <b>${String(mo).replace('.',',')}/20</b>`:''}`:'<span class="muted">0</span>'}</td></tr>
+      ${o&&g.quiz.length?`<tr><td colspan="6" style="background:var(--tint,#f6f4ff);padding:8px 12px"><div style="display:grid;gap:4px">${g.quiz.map(z=>{ const nt = scNote(z); return `<div class="row" style="gap:10px;font-size:13.5px;flex-wrap:wrap"><span class="muted" style="min-width:150px">${dhfr(z.t)}</span><span style="flex:1;min-width:160px">${esc(scSujet(z))}</span><b>${fmt(+z.ok||0)}/${fmt(+z.n||0)}</b>${nt!=null?`<span class="pill" style="font-weight:700">${String(nt).replace('.',',')}/20</span>`:''}</div>`; }).join('')}</div></td></tr>`:''}`; };
   return `<div class="card" id="sccard" style="margin-bottom:16px">
-    <div class="row wrap" style="align-items:baseline;gap:10px"><h3 style="margin:0;flex:1">👤 Élèves sans compte <span class="muted" style="font-weight:500;font-size:13px">· nom tapé à l’accueil · 30 derniers jours</span></h3><span class="muted" style="font-size:13px">${fmt(L0.length)} appareil${L0.length>1?'s':''} · ${fmt(nm)} avec un nom</span></div>
-    <input class="field" id="scq" placeholder="Chercher un nom, une filière, une licence…" value="${esc(UI.scq||'')}" style="max-width:360px;margin:10px 0" aria-label="Chercher un élève sans compte">
-    <div class="tablewrap"><table class="t"><thead><tr><th>Nom</th><th>Filière</th><th>Licence</th><th>Dernière connexion</th><th>Connexions</th></tr></thead><tbody>
-    ${L.slice(0,aff).map(g=>`<tr><td>${g.m?`<b>${esc(g.m)}</b>`:'<span class="muted">Nom pas encore tapé</span>'}</td><td>${esc(g.f||'—')}</td><td>${esc(g.n||'—')}</td><td style="white-space:nowrap">${dhfr(g.t)}</td><td>${fmt(g.nb)}</td></tr>`).join('') || `<tr><td colspan="5" class="muted">Aucun résultat.</td></tr>`}</tbody></table></div>
+    <div class="row wrap" style="align-items:baseline;gap:10px"><h3 style="margin:0;flex:1">👤 Élèves sans compte <span class="muted" style="font-weight:500;font-size:13px">· nom tapé à l’accueil · 30 derniers jours</span></h3><span class="muted" style="font-size:13px">${fmt(L0.length)} élève${L0.length>1?'s':''}</span></div>
+    ${SCX && SCX.err==='sql'?`<p class="muted" style="font-size:13px;margin:8px 0 0">Pour voir la filière, la licence et les quiz de chaque élève, colle le fichier <b>supabase/connexions/2_eleves_sans_compte.sql</b> dans Supabase (SQL Editor → Run).</p>`:''}
+    ${L0.length?`<input class="field" id="scq" placeholder="Chercher un nom, une filière, une licence…" value="${esc(UI.scq||'')}" style="max-width:360px;margin:10px 0" aria-label="Chercher un élève sans compte">
+    <div class="tablewrap"><table class="t"><thead><tr><th>Nom</th><th>Filière</th><th>Licence</th><th>Dernière activité</th><th>Connexions</th><th>Quiz faits</th></tr></thead><tbody>
+    ${L.slice(0,aff).map(ligne).join('') || `<tr><td colspan="6" class="muted">Aucun résultat.</td></tr>`}</tbody></table></div>
     ${L.length>15?`<button class="btn sm" id="scall" style="margin-top:8px">${UI.scAll?'Voir moins':`Voir les ${fmt(L.length)}`}</button>`:''}
-    <p class="muted" style="font-size:12.5px;margin:8px 0 0">Les noms arrivent dès qu’un élève ouvre l’appli mise à jour ou change son nom à l’accueil.</p>
+    <p class="muted" style="font-size:12.5px;margin:8px 0 0">${sql?'Touchez une ligne pour voir ses quiz. ':''}Filière et licence : celles choisies dans l’appli (« — » si l’élève ne les a pas encore choisies). Un élève apparaît ici dès qu’il ouvre l’appli à jour avec son nom.</p>`:''}
   </div>`;
 }
-function bindCnx(){ const sa = $('#scall'); if(sa) sa.onclick = ()=>{ UI.scAll = !UI.scAll; render(); };
+function bindCnx(){ document.querySelectorAll('#sccard [data-sca]').forEach(r=>r.onclick=()=>{ const a = r.dataset.sca, o = UI.scOpen = UI.scOpen || new Set(); o.has(a)?o.delete(a):o.add(a); render(); });
+  const sa = $('#scall'); if(sa) sa.onclick = ()=>{ UI.scAll = !UI.scAll; render(); };
   const sq = $('#scq'); if(sq) sq.oninput = ()=>{ const pos = sq.selectionStart; UI.scq = sq.value; clearTimeout(sq.t); sq.t = setTimeout(()=>{ render(); const n = $('#scq'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} } }, 250); }; const b = $('#cnxall'); if(b) b.onclick = ()=>{ UI.cnxAll = !UI.cnxAll; render(); }; document.querySelectorAll('#cnxcard [data-user]').forEach(x=>x.onclick=()=>openUser(x.dataset.user)); }
 function derniereCnx(p){ const c = cnxDe(p.id)[0]; return c ? dhfr(c.t) : relTime(p.last_seen); }
 function bindUserRows(){ document.querySelectorAll('[data-user]').forEach(tr=>tr.onclick=e=>{ if(e.target.closest('input,button')) return; openUser(tr.dataset.user); }); }
