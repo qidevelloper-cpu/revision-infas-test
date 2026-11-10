@@ -3331,4 +3331,16 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  const _lo=layoutOf;layoutOf=function(sc){const L=_lo.apply(this,arguments);if(sc!=='stats'||!Array.isArray(L)||L.some(b=>b.id==='stats.notes'))return L;return [{id:'stats.notes',inst:'stats.notes'}].concat(L)};
 })();
 
+/* =========================================================
+   HEURES DE CONNEXION · une trace « connexion » à l'ouverture de l'appli et au retour après 30 min (pour le tableau de bord)
+   ========================================================= */
+(function(){
+ function cpt(){try{const t=RIC.session&&RIC.session.access_token;if(!t)return '';const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return String(JSON.parse(atob(b)).sub||'').slice(0,64)}catch(e){return ''}}
+ function cx(){try{if(typeof RIC==='undefined'||!RIC.track||(RIC.off&&RIC.off()))return;const t=Date.now(),l=+(localStorage.getItem('ri_cx')||0);if(t-l<30*60000)return;localStorage.setItem('ri_cx',String(t));
+  const c=cpt(),p={};if(c)p.cpt=c;RIC.track('connexion',p)}catch(e){}}
+ window.riConnexion=cx;
+ setTimeout(cx,5000);
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')setTimeout(cx,1500)});
+})();
+
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

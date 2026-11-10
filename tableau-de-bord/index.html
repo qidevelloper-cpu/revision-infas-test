@@ -643,6 +643,7 @@ let REAL = null;   // statistiques réelles envoyées par le portail élève (ap
 async function loadReal(){
   REAL = null; if(MODE!=='supabase' || !SB) return;
   try{ const {data,error} = await SB.rpc('stats_usage', {p_jours:120}); if(!error && data && data.totaux && data.totaux.evenements>0) REAL = data; }catch(e){}
+  await loadCnx();
 }   // dernier état connu de Supabase : table -> Map(id -> json)
 function snapshotFrom(db){
   const s = {};
@@ -1259,6 +1260,45 @@ function bindLive(){
 }
 setInterval(()=>{ if(DB && page==='overview' && !document.hidden) loadPresence(); }, 30e3);
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && DB && page==='overview' && Date.now()-PRES_T>20e3) loadPresence(); });
+/* ---------- Heures de connexion : traces « connexion » / « ouverture » envoyées par l'appli (fonction SQL connexions) ---------- */
+let CNX = null;
+async function loadCnx(){
+  if(MODE!=='supabase' || !SB){ CNX = null; return; }
+  try{ const {data,error} = await SB.rpc('connexions', {p_jours:30});
+    CNX = error ? {err: /connexions|function|PGRST/i.test(String(error.message||'')) ? 'sql' : 'reseau'} : {L: cnxPrep(data||[])}; }
+  catch(e){ CNX = {err:'reseau'}; }
+}
+function cnxPrep(rows){ // une connexion par appareil et par tranche de 10 minutes ; rattachée à l'élève par son compte ou son appareil
+  const L = rows.filter(x=>x && x.t).sort((a,b)=>new Date(b.t)-new Date(a.t)), last = {}, out = [];
+  for(const x of L){ const t = new Date(x.t).getTime(), k = x.a||'?'; if(last[k]!=null && last[k]-t < 10*60e3) continue; last[k] = t; out.push(x); }
+  out.forEach(x=>{ const p = (x.c && DB.profiles.find(p=>p.auth_id===x.c)) || (x.a && DB.profiles.find(p=>(p.appareils||[]).some(a=>String(a).includes(x.a)))); x.pid = p ? p.id : null; });
+  return out;
+}
+function cnxData(){ // en données locales : exemple tiré des dernières visites
+  if(CNX) return CNX;
+  return {demo:true, L: DB.profiles.flatMap((p,i)=>[0,1,2].map(j=>({t:new Date(new Date(p.last_seen).getTime() - j*(26+i%5)*36e5 - (i*7%50)*6e4).toISOString(), pid:p.id, a:'demo'})))
+    .filter(x=>Date.now()-new Date(x.t).getTime() < 30*DAY).sort((a,b)=>new Date(b.t)-new Date(a.t))};
+}
+const cnxDe = pid => { const X = cnxData(); return X.L ? X.L.filter(x=>x.pid===pid) : []; };
+const dhfr = iso => `${dfr(iso,{weekday:'short',day:'numeric',month:'short'})} à ${hfr(iso)}`;
+function cnxCard(){
+  const X = cnxData();
+  if(X.err) return `<div class="card" id="cnxcard"><h3 style="margin:0 0 6px">🕒 Heures de connexion</h3><p class="muted" style="margin:0">${X.err==='sql'?'Colle le fichier <b>supabase/connexions/1_connexions.sql</b> dans Supabase (SQL Editor → Run) pour voir les heures de connexion.':'Impossible de joindre Supabase pour l’instant. Touchez « Actualiser ».'}</p></div>`;
+  const L = X.L, H = Array(24).fill(0); L.forEach(x=>H[new Date(x.t).getHours()]++);
+  const mx = Math.max(1,...H), pic = H.indexOf(Math.max(...H)), aff = UI.cnxAll ? 80 : 12;
+  const who = x=>{ const p = x.pid && DB.profiles.find(q=>q.id===x.pid); return p ? `<button class="lnk" data-user="${esc(p.id)}" style="font-weight:700">${esc(fullName(p))}</button>` : `<span class="muted">Sans compte${x.f?' · '+esc(x.f)+(x.n?' '+esc(x.n):''):''}</span>`; };
+  return `<div class="card" id="cnxcard" style="margin-bottom:16px">
+    <div class="row wrap" style="align-items:baseline"><h3 style="margin:0;flex:1">🕒 Heures de connexion <span class="muted" style="font-weight:500;font-size:13px">· 30 derniers jours${X.demo?' · exemple (données locales)':''}</span></h3>${L.length?`<span class="muted" style="font-size:13px">${fmt(L.length)} connexion${L.length>1?'s':''} · le plus de monde vers <b>${pic} h</b></span>`:''}</div>
+    ${L.length?`<div style="display:grid;grid-template-columns:repeat(24,1fr);gap:3px;align-items:end;height:90px;margin:14px 0 4px" aria-label="Connexions selon l’heure">${H.map((n,h)=>`<div title="${h} h : ${n} connexion${n>1?'s':''}" style="height:${Math.max(3,Math.round(n/mx*86))}px;border-radius:4px 4px 0 0;background:${h===pic?'var(--brand,#6C3BF5)':'color-mix(in srgb,var(--brand,#6C3BF5) 45%,transparent)'}"></div>`).join('')}</div>
+    <div style="display:grid;grid-template-columns:repeat(24,1fr);gap:3px;font-size:10.5px;color:var(--muted,#888);text-align:center">${H.map((n,h)=>`<span>${h%3===0?h+'h':''}</span>`).join('')}</div>
+    <div class="sect" style="margin-top:14px">Dernières connexions</div>
+    <div class="tablewrap"><table class="t"><thead><tr><th>Jour et heure</th><th>Élève</th></tr></thead><tbody>${L.slice(0,aff).map(x=>`<tr><td style="white-space:nowrap">${dhfr(x.t)}</td><td>${who(x)}</td></tr>`).join('')}</tbody></table></div>
+    ${L.length>12?`<button class="btn sm" id="cnxall" style="margin-top:8px">${UI.cnxAll?'Voir moins':'Voir plus de connexions'}</button>`:''}`
+    :`<p class="muted" style="margin:8px 0 0">Aucune connexion reçue sur 30 jours. Les heures s’affichent dès que les élèves ouvrent l’appli mise à jour.</p>`}
+  </div>`;
+}
+function bindCnx(){ const b = $('#cnxall'); if(b) b.onclick = ()=>{ UI.cnxAll = !UI.cnxAll; render(); }; document.querySelectorAll('#cnxcard [data-user]').forEach(x=>x.onclick=()=>openUser(x.dataset.user)); }
+function derniereCnx(p){ const c = cnxDe(p.id)[0]; return c ? dhfr(c.t) : relTime(p.last_seen); }
 function bindUserRows(){ document.querySelectorAll('[data-user]').forEach(tr=>tr.onclick=e=>{ if(e.target.closest('input,button')) return; openUser(tr.dataset.user); }); }
 
 /* =========================================================
@@ -1293,7 +1333,7 @@ VIEWS.eleves = ()=>{
   const rows = L.slice((s.page-1)*per, s.page*per);
   const sel = (name,val,opts)=>`<select class="field" style="width:auto" data-f="${name}" aria-label="${name}">${opts.map(([v,l])=>`<option value="${v}" ${val===v?'selected':''}>${l}</option>`).join('')}</select>`;
   const nReal = DB.profiles.filter(p=>p.auth_id).length;
-  return headHTML('Élèves', `${fmt(DB.profiles.length)} élèves dont ${fmt(nReal)} vrai${nReal>1?'s':''} compte${nReal>1?'s':''} · cliquez sur un élève pour ouvrir sa fiche.`, `${demoTag()}${MODE==='supabase'?`<button class="btn" id="ureload">Actualiser</button>`:''}<button class="btn" id="csv">${ic('dl')}Exporter en CSV</button><button class="btn pri" id="adduser">${ic('plus')}Ajouter un élève</button>`) + `
+  return headHTML('Élèves', `${fmt(DB.profiles.length)} élèves dont ${fmt(nReal)} vrai${nReal>1?'s':''} compte${nReal>1?'s':''} · cliquez sur un élève pour ouvrir sa fiche.`, `${demoTag()}${MODE==='supabase'?`<button class="btn" id="ureload">Actualiser</button>`:''}<button class="btn" id="csv">${ic('dl')}Exporter en CSV</button><button class="btn pri" id="adduser">${ic('plus')}Ajouter un élève</button>`) + cnxCard() + `
   <div class="card">
     <div class="row wrap" style="margin-bottom:12px">
       <input class="field" id="uq" placeholder="Nom, téléphone ou identifiant" value="${esc(s.q)}" style="flex:1;min-width:200px" aria-label="Rechercher">
@@ -1303,10 +1343,10 @@ VIEWS.eleves = ()=>{
       ${sel('type',s.type,[['tous','Comptes et tests'],['compte','Vrais comptes'],['test','Élèves de test']])}
     </div>
     ${s.sel.size?`<div class="row wrap" style="background:var(--soft);border-radius:12px;padding:8px 12px;margin-bottom:10px"><b>${s.sel.size} sélectionné${s.sel.size>1?'s':''}</b><div class="grow" style="flex:1"></div><button class="btn sm pri" id="bulkgift">${ic('gift')}Offrir un pass</button><button class="btn sm" id="bulkclear">Désélectionner</button></div>`:''}
-    <div class="tablewrap"><table class="t"><thead><tr><th style="width:30px"><input type="checkbox" id="selall" aria-label="Tout sélectionner" ${rows.length && rows.every(p=>s.sel.has(p.id))?'checked':''}></th><th>Élève</th><th>Niveau</th><th>Accès</th><th>Dernière visite</th><th>Quiz</th><th>Appareils</th></tr></thead><tbody>
+    <div class="tablewrap"><table class="t"><thead><tr><th style="width:30px"><input type="checkbox" id="selall" aria-label="Tout sélectionner" ${rows.length && rows.every(p=>s.sel.has(p.id))?'checked':''}></th><th>Élève</th><th>Niveau</th><th>Accès</th><th>Dernière connexion</th><th>Quiz</th><th>Appareils</th></tr></thead><tbody>
     ${rows.map(p=>`<tr class="click" data-user="${p.id}"><td><input type="checkbox" data-sel="${p.id}" ${s.sel.has(p.id)?'checked':''} aria-label="Sélectionner ${esc(fullName(p))}"></td>
       <td><div class="who"><div class="av" style="background:${avColor(p.id)}">${initials(p)}</div><div><b>${esc(fullName(p))}${p.auth_id?' <span class="pill ok" style="font-size:11px">Compte</span>':''}</b><small>${esc(p.email||p.telephone)}</small></div></div></td>
-      <td style="white-space:nowrap">${p.filiere} · ${p.annee}</td><td>${accessPill(p)}</td><td>${relTime(p.last_seen)}</td><td class="num">${fmt(p.quiz)}</td><td>${p.appareils.length}${p.appareils.length>1?' <span class="pill warn">2</span>':''}</td></tr>`).join('') || `<tr><td colspan="7"><div class="empty">Aucun élève ne correspond à ces filtres. Modifiez la recherche ou réinitialisez les filtres.</div></td></tr>`}
+      <td style="white-space:nowrap">${p.filiere} · ${p.annee}</td><td>${accessPill(p)}</td><td style="white-space:nowrap">${derniereCnx(p)}</td><td class="num">${fmt(p.quiz)}</td><td>${p.appareils.length}${p.appareils.length>1?' <span class="pill warn">2</span>':''}</td></tr>`).join('') || `<tr><td colspan="7"><div class="empty">Aucun élève ne correspond à ces filtres. Modifiez la recherche ou réinitialisez les filtres.</div></td></tr>`}
     </tbody></table></div>
     <div class="pager"><span>${L.length?`${(s.page-1)*per+1}–${Math.min(s.page*per,L.length)} sur ${fmt(L.length)}`:'0 résultat'}</span><div class="row"><button class="btn sm" id="pprev" ${s.page<=1?'disabled':''}>Précédent</button><span>Page ${s.page} / ${pages}</span><button class="btn sm" id="pnext" ${s.page>=pages?'disabled':''}>Suivant</button></div></div>
   </div>`;
@@ -1318,7 +1358,7 @@ AFTER.eleves = ()=>{
   document.querySelectorAll('[data-sel]').forEach(cb=>cb.onchange=()=>{ cb.checked?s.sel.add(cb.dataset.sel):s.sel.delete(cb.dataset.sel); render(); });
   $('#selall').onchange = e=>{ const L=filteredUsers().slice((s.page-1)*20, s.page*20); L.forEach(p=> e.target.checked?s.sel.add(p.id):s.sel.delete(p.id)); render(); };
   $('#pprev').onclick=()=>{ s.page--; render(); }; $('#pnext').onclick=()=>{ s.page++; render(); };
-  $('#adduser').onclick = addUserModal;
+  $('#adduser').onclick = addUserModal; bindCnx();
   if($('#ureload')) $('#ureload').onclick = async ()=>{ try{ toast('Actualisation…'); DB = await SupabaseSource.load(); await loadReal(); render(); toast('Liste à jour.'); }catch(e){ toast(frErr(e)); } };
   $('#csv').onclick = ()=>{
     const L = filteredUsers();
@@ -1350,7 +1390,7 @@ function openUser(id){
       ${MODE==='supabase'?(()=>{ const x=instParEleve(p.auth_id||p.id); return `<span>Application</span><b>${!INST?'—':!x||x.installe==null?'Inconnu':x.installe?'📲 Installée'+(x.icone_at?' · ouverte depuis l’icône le '+dfr(x.icone_at,{day:'numeric',month:'short'}):''):'🌐 Dans le navigateur (pas installée)'}</b>`; })():''}
       <span>Programme</span><b>${esc(p.programme)}</b>
       <span>Inscrit le</span><b>${dfr(p.created_at)}</b>
-      <span>Dernière visite</span><b>${relTime(p.last_seen)} (${dfr(p.last_seen)})</b>
+      <span>Dernière connexion</span><b>${(()=>{ const c=cnxDe(p.id)[0]; return c?dhfr(c.t):relTime(p.last_seen)+' ('+dfr(p.last_seen)+')'; })()}</b>
       <span>Quiz terminés</span><b>${fmt(p.quiz)}</b>
       ${pass?`<span>Pass en cours</span><b>${plan(pass.plan)} jusqu’au ${dfr(pass.end)}</b>`:''}
     </div>
@@ -1361,6 +1401,7 @@ function openUser(id){
     </div>
     <div class="sect">Appareils connectés · ${p.appareils.length} sur 2</div>
     ${p.appareils.map((a,i)=>`<div class="row" style="padding:8px 0;border-top:1px solid var(--line)"><span class="ic" style="width:30px;height:30px;border-radius:9px;background:var(--soft);display:grid;place-items:center">${ic('phone')}</span><span style="flex:1">${esc(String(a).split(' · dev-')[0])}</span><button class="btn sm" data-rmdev="${i}">Retirer</button></div>`).join('') || '<div class="muted">Aucun appareil.</div>'}
+    ${(()=>{ const C=cnxDe(p.id); return C.length?`<div class="sect">Heures de connexion · 30 derniers jours (${C.length})</div><div style="display:flex;flex-wrap:wrap;gap:6px">${C.slice(0,24).map(x=>`<span class="pill" style="font-weight:600">${dhfr(x.t)}</span>`).join('')}</div>`:''; })()}
     <div class="sect">Historique des accès</div>
     ${hist.length? `<table class="t"><thead><tr><th>Pass</th><th>Du</th><th>Au</th><th>Origine</th></tr></thead><tbody>${hist.map(e=>`<tr><td>${plan(e.plan)}</td><td>${dfr(e.start,{day:'numeric',month:'short'})}</td><td>${dfr(e.end,{day:'numeric',month:'short',year:'2-digit'})}</td><td>${{cadeau:'Offert',manuel:'Manuel',promo:'Code promo'}[e.source]||e.source}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">Jamais Premium.</div>'}
     ${reps.length?`<div class="sect">Signalements envoyés · ${reps.length}</div>${reps.map(r=>`<div style="padding:6px 0;font-size:14px">${esc(matName(r.mat))} — <span class="muted">${esc(r.message)}</span></div>`).join('')}`:''}
@@ -1645,7 +1686,10 @@ VIEWS.acces = ()=>{
   return headHTML('Cours gratuits et Premium', 'Sur chaque cours, touchez <b>🆓 Gratuit</b>, <b>⭐ Premium</b> ou <b>🙈 Masqué</b>. C’est enregistré tout de suite.',
       `<button class="btn" id="preview">${ic('eye')}Voir comme un élève gratuit</button>`) + `
   ${syncBox()}
+  ${undoBar()}
   ${promoCard()}
+  ${bulkSujCard()}
+  ${premCheckCard()}
   <div class="cstat" role="group" aria-label="Filtrer par accès">${['gratuit','premium','masque'].map(v=>`<button class="${v} ${C.st===v?'on':''}" data-cst="${v}" aria-pressed="${C.st===v}"><b>${cnt[v]}</b><span>${COUR_ST[v][0]} cours ${{gratuit:'gratuits',premium:'Premium',masque:'masqués'}[v]}</span></button>`).join('')}</div>
   <div class="ctool">
     <label class="srch">${ic('search')}<input id="cq" placeholder="Chercher un cours…" value="${esc(C.q)}" aria-label="Chercher un cours"></label>
@@ -1754,7 +1798,7 @@ function matBody(m){
   return h;
 }
 AFTER.acces = ()=>{
-  bindPromo();
+  bindPromo(); bindUndo(); bindBulkSuj(); bindPremCheck();
   const C = UI.cours, q = sel=>document.querySelectorAll(sel);
   q('[data-rule]').forEach(b=>b.onclick=()=>{ setRule(b.dataset.rule, b.dataset.v); render(); });
   q('[data-def]').forEach(b=>b.onclick=()=>{ DB.access.defaut=b.dataset.def; DB.access.version++; DB.access.misAJour=new Date().toISOString(); audit('Règle par défaut : '+ACC_LABEL[b.dataset.def],'Tout le contenu'); render(); });
@@ -1786,6 +1830,114 @@ AFTER.acces = ()=>{
   if($('#orph')) $('#orph').onclick = ()=>{ const L=orphans(); confirmModal('Nettoyer les règles sans cours ?', `${L.length} règle(s) visent des cours qui n’existent plus dans le portail (anciens identifiants de test). Elles seront supprimées.`, 'Supprimer ces règles', ()=>{ L.forEach(k=>delete DB.access.regles[k]); DB.access.version++; DB.access.misAJour=new Date().toISOString(); audit('Règles sans cours supprimées', L.length+' règles'); render(); }); };
 };
 function orphans(){ return Object.keys(DB.access.regles).filter(k=>!NODES[k]); }
+
+/* ---------- Annuler : chaque changement de la page « Cours gratuits et Premium » peut être défait ---------- */
+const UNDO_ACC = []; let UNDO_GEN = 0;
+function accSnap(){ const A = DB.access; return JSON.stringify({regles:A.regles||{}, questions:A.questions||{}, plusapp:A.plusapp||{}, fincorr:A.fincorr||{}, promo:A.promo||null, defaut:A.defaut}); }
+function undoBar(){ const n = UNDO_ACC.length;
+  return `<div id="undoacc" class="undobar" role="region" aria-label="Annuler" style="position:sticky;top:8px;z-index:30;display:${n?'flex':'none'};align-items:center;gap:10px;flex-wrap:wrap;background:var(--ink,#1d1b2e);color:#fff;border-radius:14px;padding:10px 14px;margin:0 0 14px;box-shadow:0 6px 20px rgba(0,0,0,.18)">
+    <span style="flex:1;min-width:160px">↶ <b>${n}</b> modification${n>1?'s':''} sur cette page. Vous pouvez revenir en arrière.</span>
+    <button class="btn sm" id="undoone" style="background:#fff;color:#1d1b2e">↶ Annuler la dernière</button>
+    ${n>1?`<button class="btn sm" id="undoall" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.5)">⟲ Tout annuler (${n})</button>`:''}</div>`; }
+function majUndo(){ const el = document.getElementById('undoacc'); if(!el) return; const w = document.createElement('div'); w.innerHTML = undoBar(); el.replaceWith(w.firstElementChild); bindUndo(); }
+function restaurerAcc(snap, combien){
+  UNDO_GEN++; const o = JSON.parse(snap), A = DB.access;
+  A.regles = o.regles; A.questions = o.questions; A.plusapp = o.plusapp; A.fincorr = o.fincorr; A.defaut = o.defaut; if(o.promo) A.promo = o.promo; else delete A.promo;
+  A.version++; A.misAJour = new Date().toISOString();
+  audit(combien>1 ? `Annulation de ${combien} modifications` : 'Annulation de la dernière modification', 'Cours gratuits et Premium');
+  toast(combien>1 ? `⟲ ${combien} modifications annulées.` : '↶ Dernière modification annulée.'); render();
+}
+function annulerAcc(tout){ if(!UNDO_ACC.length) return; if(tout){ const n = UNDO_ACC.length, s0 = UNDO_ACC[0]; UNDO_ACC.length = 0; restaurerAcc(s0, n); } else restaurerAcc(UNDO_ACC.pop(), 1); }
+function bindUndo(){ const a = $('#undoone'), b = $('#undoall'); if(a) a.onclick = ()=>annulerAcc(false);
+  if(b) b.onclick = ()=>confirmModal('Tout annuler ?', `Les ${UNDO_ACC.length} modifications faites sur cette page seront défaites : les cours et les sujets reviennent à leur état d’avant.`, 'Oui, tout annuler', ()=>{ closeModal(); annulerAcc(true); }); }
+if(!window.__undoAcc){ window.__undoAcc = 1;
+  ['click','change'].forEach(t=>document.addEventListener(t, e=>{
+    if(page!=='acces' || !DB || !DB.access) return; const g = e.target; if(g && g.closest && g.closest('#undoacc,#undoone,#undoall')) return;
+    const avant = accSnap(), gen = UNDO_GEN; setTimeout(()=>{ if(!DB || !DB.access || gen!==UNDO_GEN) return; if(accSnap()!==avant && UNDO_ACC[UNDO_ACC.length-1]!==avant){ UNDO_ACC.push(avant); if(UNDO_ACC.length>60) UNDO_ACC.shift(); majUndo(); } }, 0);
+  }, true));
+  document.addEventListener('keydown', e=>{ if(page!=='acces' || !(e.ctrlKey||e.metaKey) || e.key.toLowerCase()!=='z' || e.shiftKey) return; const t = e.target; if(t && /INPUT|TEXTAREA|SELECT/.test(t.tagName)) return; if(UNDO_ACC.length){ e.preventDefault(); annulerAcc(false); } });
+}
+
+/* ---------- Une même règle pour plusieurs sujets : questions gratuites, correction à la fin, accès ---------- */
+function tousSujets(){ return matAll().flatMap(m=>{ const n = sujetsOf(m), L = []; for(let i=1;i<=n;i++){ const st = Array.isArray(m.sujets) && m.sujets[i-1]; L.push({k:`matiere:${m.id}/sujet:${i}`, mk:'matiere:'+m.id, m, lab: st ? st[0] : 'Sujet '+i, nq: st ? st[1] : null}); } return L; }); }
+function bsState(){ return UI.bs = UI.bs || {qm:'n', n:20, fc:'', acc:'', cible:'tous', sel:new Set(), q:'', open:false, ouv:new Set()}; }
+function bsCibles(){ const B = bsState(), all = tousSujets();
+  if(B.cible==='cours') return all.filter(x=>UI.cours.sel.has(x.mk));
+  if(B.cible==='choix') return all.filter(x=>B.sel.has(x.k));
+  if(B.cible==='visibles'){ const ok = new Set(matAll().filter(courseOk).map(m=>'matiere:'+m.id)); return all.filter(x=>ok.has(x.mk)); }
+  return all; }
+function bulkSujCard(){
+  const B = bsState(), all = tousSujets(), cib = bsCibles(), nc = UI.cours.sel.size, nv = matAll().filter(courseOk).length;
+  const opt = (v,l,cur)=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`;
+  const rien = B.qm==='' && !B.fc && !B.acc;
+  let liste = '';
+  if(B.cible==='choix'){ const qq = nrmTxt(B.q.trim());
+    liste = `<div style="margin-top:10px"><input class="field" id="bsq" placeholder="Chercher un cours ou un sujet…" value="${esc(B.q)}" style="max-width:360px" aria-label="Chercher un sujet">
+      <div class="row wrap" style="margin:8px 0;gap:8px"><button class="btn sm" id="bsnone">Tout décocher</button><span class="muted" style="font-size:13px">${B.sel.size} sujet${B.sel.size>1?'s':''} coché${B.sel.size>1?'s':''}</span></div>
+      <div style="max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px 10px">${matAll().map(m=>{ const mk = 'matiere:'+m.id, L = all.filter(x=>x.mk===mk && (!qq || nrmTxt(m.nom+' '+x.lab).includes(qq))); if(!L.length) return '';
+        const nOn = L.filter(x=>B.sel.has(x.k)).length, ouv = B.ouv.has(mk) || !!qq;
+        return `<div style="border-bottom:1px solid var(--line);padding:6px 0"><div class="row" style="gap:8px"><input type="checkbox" data-bsm="${mk}" ${nOn===L.length?'checked':''} aria-label="Tous les sujets de ${esc(m.nom)}" style="width:18px;height:18px"><button class="lnk" data-bso="${mk}" style="flex:1;text-align:left;font-weight:700">${ouv?'▾':'▸'} ${esc(m.nom)}</button><span class="muted" style="font-size:12.5px">${nOn}/${L.length}</span></div>
+          ${ouv?`<div style="padding:4px 0 4px 26px;display:grid;gap:4px">${L.map(x=>`<label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:13.5px"><input type="checkbox" data-bss="${x.k}" ${B.sel.has(x.k)?'checked':''} style="width:16px;height:16px">${esc(x.lab)}${x.nq?` <span class="muted">· ${x.nq} q.</span>`:''}</label>`).join('')}</div>`:''}</div>`; }).join('')}</div></div>`; }
+  return `<details class="card" id="bscard" ${B.open?'open':''} style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:800;font-size:16px">🧩 Appliquer une même règle à plusieurs sujets</summary>
+    <p class="muted" style="margin:8px 0 12px;font-size:13.5px">Exemple : « 20 premières questions gratuites » pour tous les sujets, pour les cours cochés, ou pour les sujets que vous choisissez.</p>
+    <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">
+      <label style="display:grid;gap:4px"><b style="font-size:13.5px">🎁 Questions gratuites</b><div class="row" style="gap:6px"><select class="field" id="bsqm" style="width:auto">${opt('n','Les premières :',B.qm)}${opt('x','Comme le cours',B.qm)}${opt('','Ne pas changer',B.qm)}</select>${B.qm==='n'?`<input type="number" min="0" max="500" class="field" id="bsn" value="${B.n}" style="width:76px" aria-label="Nombre de questions gratuites">`:''}</div>${B.qm==='n'?`<small class="muted">Les ${B.n} premières questions de chaque sujet sont gratuites, le reste Premium.</small>`:''}</label>
+      <label style="display:grid;gap:4px"><b style="font-size:13.5px">📝 Correction à la fin</b><select class="field" id="bsfc">${opt('','Ne pas changer',B.fc)}${opt('1','Activer (résultats à la fin)',B.fc)}${opt('0','Désactiver (correction immédiate)',B.fc)}</select></label>
+      <label style="display:grid;gap:4px"><b style="font-size:13.5px">🔐 Accès du sujet</b><select class="field" id="bsacc">${opt('','Ne pas changer',B.acc)}${opt('gratuit','🆓 Gratuit',B.acc)}${opt('premium','⭐ Premium',B.acc)}${opt('masque','🙈 Masqué',B.acc)}${opt('inh','↺ Comme le cours',B.acc)}</select></label>
+    </div>
+    <div style="margin-top:14px"><b style="font-size:13.5px">À quels sujets ?</b>
+      <div class="seg" role="radiogroup" aria-label="Sujets visés" style="margin-top:6px;flex-wrap:wrap">${[['tous',`Tous les sujets (${all.length})`],['visibles',`Cours affichés par les filtres (${nv})`],['cours',`Cours cochés ci-dessous (${nc})`],['choix','Je choisis les sujets']].map(([v,l])=>`<button role="radio" aria-checked="${B.cible===v}" class="${B.cible===v?'on':''}" data-bsc="${v}">${l}</button>`).join('')}</div>
+      ${B.cible==='cours'&&!nc?`<p class="muted" style="font-size:13px;margin:6px 0 0">Cochez des cours dans la liste plus bas (case en haut à gauche de chaque cours).</p>`:''}
+      ${liste}</div>
+    <div class="row wrap" style="margin-top:14px;gap:10px"><button class="btn pri" id="bsgo" ${!cib.length||rien?'disabled':''}>Appliquer à ${fmt(cib.length)} sujet${cib.length>1?'s':''}</button><span class="muted" style="font-size:13px">Vous pourrez annuler avec « ↶ Annuler ».</span></div>
+  </details>`;
+}
+function appliquerSujets(L, B){
+  const Q = DB.access.questions = DB.access.questions||{}, F = DB.access.fincorr = DB.access.fincorr||{}, G = DB.access.regles, ks = new Set(L.map(x=>x.k));
+  if(B.fc==='0'){ new Set(L.map(x=>x.mk)).forEach(mk=>{ if(F[mk]){ delete F[mk]; tousSujets().filter(x=>x.mk===mk && !ks.has(x.k)).forEach(x=>F[x.k]=1); } }); }
+  L.forEach(({k})=>{
+    if(B.qm==='n') Q[k] = {n:Math.max(0,Math.min(500,parseInt(B.n,10)||0)), mode:'sujet'}; else if(B.qm==='x') delete Q[k];
+    if(B.fc==='1') F[k] = 1; else if(B.fc==='0') delete F[k];
+    if(B.acc==='inh') delete G[k]; else if(B.acc) G[k] = Object.assign({}, G[k]||{}, {acces:B.acc});
+  });
+  DB.access.version++; DB.access.misAJour = new Date().toISOString();
+  const quoi = [B.qm==='n'?`${parseInt(B.n,10)||0} questions gratuites`:B.qm==='x'?'questions gratuites comme le cours':'', B.fc==='1'?'correction à la fin':B.fc==='0'?'correction immédiate':'', B.acc?(B.acc==='inh'?'accès comme le cours':'accès '+ACC_LABEL[B.acc]):''].filter(Boolean).join(', ');
+  audit(`Règle groupée : ${quoi}`, `${L.length} sujet${L.length>1?'s':''}`); return quoi;
+}
+function bindBulkSuj(){
+  const B = bsState(), card = $('#bscard'); if(!card) return;
+  card.ontoggle = ()=>{ B.open = card.open; };
+  const on = (id, ev, f)=>{ const el = $('#'+id); if(el) el[ev] = f; };
+  on('bsqm','onchange',e=>{ B.qm = e.target.value; render(); });
+  on('bsn','onchange',e=>{ B.n = Math.max(0,Math.min(500,parseInt(e.target.value,10)||0)); render(); });
+  on('bsfc','onchange',e=>{ B.fc = e.target.value; render(); });
+  on('bsacc','onchange',e=>{ B.acc = e.target.value; render(); });
+  card.querySelectorAll('[data-bsc]').forEach(b=>b.onclick=()=>{ B.cible = b.dataset.bsc; render(); });
+  card.querySelectorAll('[data-bso]').forEach(b=>b.onclick=()=>{ const k = b.dataset.bso; B.ouv.has(k)?B.ouv.delete(k):B.ouv.add(k); render(); });
+  card.querySelectorAll('[data-bss]').forEach(c=>c.onchange=()=>{ c.checked?B.sel.add(c.dataset.bss):B.sel.delete(c.dataset.bss); render(); });
+  card.querySelectorAll('[data-bsm]').forEach(c=>c.onchange=()=>{ const mk = c.dataset.bsm, qq = nrmTxt(B.q.trim()); tousSujets().filter(x=>x.mk===mk && (!qq || nrmTxt(x.m.nom+' '+x.lab).includes(qq))).forEach(x=>c.checked?B.sel.add(x.k):B.sel.delete(x.k)); render(); });
+  on('bsnone','onclick',()=>{ B.sel.clear(); render(); });
+  const q = $('#bsq'); if(q) q.oninput = ()=>{ const pos = q.selectionStart; B.q = q.value; clearTimeout(q.t); q.t = setTimeout(()=>{ render(); const n = $('#bsq'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} } }, 200); };
+  on('bsgo','onclick',()=>{ const L = bsCibles(); if(!L.length) return;
+    confirmModal(`Appliquer à ${L.length} sujet${L.length>1?'s':''} ?`, `${[B.qm==='n'?`🎁 ${B.n} premières questions gratuites, le reste Premium`:B.qm==='x'?'🎁 Questions gratuites : comme le cours':'', B.fc==='1'?'📝 Correction à la fin':B.fc==='0'?'📝 Correction immédiate':'', B.acc?'🔐 Accès : '+(B.acc==='inh'?'comme le cours':ACC_LABEL[B.acc]):''].filter(Boolean).join('<br>')}<br><br>Vous pourrez revenir en arrière avec « ↶ Annuler ».`, 'Oui, appliquer', ()=>{ const quoi = appliquerSujets(L, B); closeModal(); toast(`✅ ${L.length} sujet${L.length>1?'s':''} : ${quoi}`); render(); }); });
+}
+
+/* ---------- Cocher directement les cours Premium ---------- */
+function premCheckCard(){
+  const U = UI.pc = UI.pc || {open:false}, vis = CATALOGUE.map(r=>({r, ms:r.matieres.filter(courseOk)})).filter(x=>x.ms.length), n = matAll().filter(m=>effective('matiere:'+m.id).acces==='premium').length;
+  return `<details class="card" id="pccard" ${U.open?'open':''} style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:800;font-size:16px">⭐ Cocher les cours Premium <span class="muted" style="font-weight:500;font-size:13px">· ${n} Premium sur ${matAll().length}</span></summary>
+    <p class="muted" style="margin:8px 0 10px;font-size:13.5px">Case cochée = ⭐ Premium · case vide = 🆓 Gratuit. C’est enregistré tout de suite ; « ↶ Annuler » défait le dernier changement.</p>
+    ${vis.map(({r,ms})=>{ const ks = ms.map(m=>'matiere:'+m.id), tous = ks.every(k=>effective(k).acces==='premium');
+      return `<div style="margin:10px 0"><label style="display:flex;gap:8px;align-items:center;font-weight:800;cursor:pointer"><input type="checkbox" data-pcr="${esc(r.id)}" ${tous?'checked':''} style="width:18px;height:18px"> ${esc(r.nom)}</label>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 14px;padding:6px 0 0 26px">${ms.map(m=>{ const k = 'matiere:'+m.id, e = effective(k).acces;
+          return `<label style="display:flex;gap:8px;align-items:center;cursor:pointer;font-size:14px;${e==='masque'?'opacity:.55':''}"><input type="checkbox" data-pck="${k}" ${e==='premium'?'checked':''} style="width:17px;height:17px">${esc(m.nom)}${e==='masque'?' <span class="muted">(masqué)</span>':''}</label>`; }).join('')}</div></div>`; }).join('')}
+  </details>`;
+}
+function bindPremCheck(){
+  const U = UI.pc = UI.pc || {open:false}, card = $('#pccard'); if(!card) return; card.ontoggle = ()=>{ U.open = card.open; };
+  card.querySelectorAll('[data-pck]').forEach(c=>c.onchange=()=>{ const k = c.dataset.pck, v = c.checked ? 'premium' : 'gratuit'; setCourses([k], v); toast(`${COUR_ST[v][0]} « ${labelOf(k)} » : ${ACC_LABEL[v]}`); render(); });
+  card.querySelectorAll('[data-pcr]').forEach(c=>c.onchange=()=>{ const r = CATALOGUE.find(x=>x.id===c.dataset.pcr); if(!r) return; const v = c.checked ? 'premium' : 'gratuit', ks = r.matieres.filter(courseOk).map(m=>'matiere:'+m.id); const n = setCourses(ks, v); toast(n?`${n} cours : ${ACC_LABEL[v]}`:'Rien à changer.'); render(); });
+}
 function previewModal(){
   const html = CATALOGUE.map(r=>{
     const items = r.matieres.map(m=>{

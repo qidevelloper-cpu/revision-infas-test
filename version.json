@@ -1,10 +1,10 @@
 {
- "v": "6beb96e66c",
+ "v": "8c48d5c3b0",
  "date": "2026-10-25",
- "sig": "cd8fb8be37cbfea575b02df52ccf17f64ce15df8",
+ "sig": "2b95447bb481baf66d36122ab8cf45311078d822",
  "notes": [
   {
-   "t": "Fin de composition, correction à la fin, Mes notes"
+   "t": "Heures de connexion"
   }
  ],
  "mats": {
@@ -107,11 +107,11 @@
  },
  "hist": [
   {
-   "v": "6beb96e66c",
+   "v": "8c48d5c3b0",
    "date": "2026-10-25",
    "notes": [
     {
-     "t": "Fin de composition, correction à la fin, Mes notes"
+     "t": "Heures de connexion"
     }
    ]
   },
