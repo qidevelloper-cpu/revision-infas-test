@@ -806,13 +806,27 @@ const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platfo
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();BIP=e;setTimeout(()=>instAsk(),2500)});
 window.addEventListener('appinstalled',()=>{try{S.installed=1;save()}catch(e){}const d=$('#instAsk');if(d)d.remove();toast(Tx('in.ok','📲 Application installée : retrouve-la sur ton écran d’accueil'),4000)});
 function instDo(){if(BIP){const p=BIP;BIP=null;p.prompt();p.userChoice.then(c=>{if(c&&c.outcome!=='accepted'){S.instAsk=Date.now();save()}}).catch(()=>{})}else if(isIOS())instAsk(true)}
+/* iPhone : l'installation ne marche que dans Safari. Ailleurs (Chrome, Google, Facebook, Instagram, TikTok… ou page ouverte dans une
+   autre appli) : « Ouvre ce lien dans Safari » + bouton Copier le lien. Dans Safari : les 3 gestes, et un avertissement — dans la liste
+   Partager, seul « Sur l'écran d'accueil » installe l'appli (des raccourcis comme « R↓Download » mènent à des publicités). */
+function iosNavigateur(){const u=navigator.userAgent||'';if(/CriOS|FxiOS|EdgiOS|OPiOS|OPT\/|YaBrowser|DuckDuckGo|GSA\/|FBAN|FBAV|FB_IAB|Instagram|Line\/|Snapchat|TikTok|musical_ly|BytedanceWebview|Twitter|Pinterest|LinkedInApp|MicroMessenger/i.test(u))return 'autre';
+ if(/Mobile\//.test(u)&&!/Safari\//.test(u))return 'autre';return 'safari'}
+function iosCopier(){const l=location.origin+location.pathname.replace(/index\.html$/,'');const ok=()=>toast(Tx('in.copie','Lien copié : ouvre Safari et colle-le dans la barre d’adresse'));
+ try{navigator.clipboard.writeText(l).then(ok).catch(()=>prompt(Tx('in.copie2','Copie ce lien puis colle-le dans Safari :'),l))}catch(e){prompt(Tx('in.copie2','Copie ce lien puis colle-le dans Safari :'),l)}}
+function iosGuideHTML(){const et=(n,t)=>`<div style="display:flex;gap:8px;align-items:flex-start;margin:6px 0"><b style="flex:0 0 22px;height:22px;border-radius:50%;background:var(--h1,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px">${n}</b><span>${t}</span></div>`;
+ if(iosNavigateur()!=='safari')return `<div><b>${esc(Tx('in.sf0','⚠️ Ouvre d’abord ce lien dans Safari'))}</b></div>`+et(1,esc(Tx('in.sf1','Ici, l’installation n’est pas possible : il faut l’appli Safari (la boussole bleue).')))
+  +et(2,esc(Tx('in.sf2','Touche ⋯ ou le menu de cette appli, puis « Ouvrir dans Safari ». Sinon, copie le lien et colle-le dans Safari.')))
+  +`<button class="btn coral" style="width:100%;margin-top:6px" onclick="iosCopier()">${esc(Tx('in.cp','📋 Copier le lien'))}</button>`;
+ return et(1,esc(Tx('in.i1','Touche le bouton Partager ⬆️ (carré avec une flèche vers le haut), en bas de Safari ou à côté de l’adresse.')))
+  +et(2,esc(Tx('in.i2','Fais défiler la liste vers le bas et touche « Sur l’écran d’accueil » ⊞.')))+et(3,esc(Tx('in.i3','Touche « Ajouter » en haut à droite : l’icône Révision INFAS apparaît sur ton écran.')))
+  +`<div class="small" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff7ed;color:#9a3412">${esc(Tx('in.warn','⚠️ Ne touche aucun autre choix de cette liste (par exemple « R↓Download » ou d’autres raccourcis) : ils ne viennent pas de Révision INFAS et ouvrent des publicités. Seul « Sur l’écran d’accueil » installe l’appli.'))}</div>`}
 function instAsk(force){try{if(isStandalone()||!/^https?:$/.test(location.protocol)||EDITMODE)return;const RI2=window.riInstallee?riInstallee():{};const man=!BIP&&!isIOS()&&RI2.related===false&&/android/i.test(navigator.userAgent);   /* Android : pas d'installation proposée par Chrome mais appli non installée → mode d'emploi */
  if(!BIP&&!isIOS()&&!man)return;if(!force&&(RI2.related===true||(S.installed&&!BIP)))return;   /* déjà installée sur ce téléphone */
  if(!force&&window.riCompo&&riCompo()&&riCompo().lance)return;   /* jamais pendant une compo */
  if(!force&&S.instAsk&&Date.now()-S.instAsk<6e5)return;   /* « Plus tard » : nouveau rappel 10 minutes après */
  if($('#instAsk'))return;if(!force&&($('#relNote')||$('#rkup')||$('#updBar')||$('#nfAsk'))){setTimeout(()=>instAsk(),4000);return}
  const d=document.createElement('div');d.id='instAsk';d.className='nfask instask';const ios=!BIP&&(isIOS()||man);
- d.innerHTML=`<div class="nfab"><img loading="lazy" decoding="async" src="icons/icon-192.png" alt="" class="instic" onerror="this.style.display='none'"><div><b>${esc(Tx('in.t','📲 Installe l’application Révision INFAS'))}</b><div class="muted small">${esc(Tx('in.s','Installe-la pour y avoir accès en permanence : un seul appui depuis ton écran d’accueil, même sans internet, avec tes rappels de révision. C’est gratuit et léger.'))}</div></div></div>${ios?`<div class="insios">${man?esc(Tx('in.and','Dans Chrome : touche les trois points ⋮ en haut à droite, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».')):esc(Tx('in.ios','Sur iPhone : touche le bouton Partager (carré avec une flèche vers le haut) en bas de Safari, puis « Sur l’écran d’accueil ».'))}</div><div class="nfab2"><button class="btn light" id="inN" style="width:100%">${esc(Tx('in.okios','J’ai compris'))}</button></div>`:`<div class="nfab2"><button class="btn coral" id="inY">${esc(Tx('in.y','Installer'))}</button><button class="btn light" id="inN">${esc(Tx('in.n','Plus tard'))}</button></div>`}`;
+ d.innerHTML=`<div class="nfab"><img loading="lazy" decoding="async" src="icons/icon-192.png" alt="" class="instic" onerror="this.style.display='none'"><div><b>${esc(Tx('in.t','📲 Installe l’application Révision INFAS'))}</b><div class="muted small">${esc(Tx('in.s','Installe-la pour y avoir accès en permanence : un seul appui depuis ton écran d’accueil, même sans internet, avec tes rappels de révision. C’est gratuit et léger.'))}</div></div></div>${ios?`<div class="insios">${man?esc(Tx('in.and','Dans Chrome : touche les trois points ⋮ en haut à droite, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».')):iosGuideHTML()}</div><div class="nfab2"><button class="btn light" id="inN" style="width:100%">${esc(Tx('in.okios','J’ai compris'))}</button></div>`:`<div class="nfab2"><button class="btn coral" id="inY">${esc(Tx('in.y','Installer'))}</button><button class="btn light" id="inN">${esc(Tx('in.n','Plus tard'))}</button></div>`}`;
  document.body.appendChild(d);const y=$('#inY',d);if(y)y.onclick=()=>{d.remove();instDo()};$('#inN',d).onclick=()=>{S.instAsk=Date.now();save();d.remove()}}catch(e){}}
 
 /* ---------- 5. TAILLE DU TEXTE (choix de l'étudiant) + type de recherche ---------- */
@@ -2770,7 +2784,18 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
    if(!EDITMODE&&e==='premium'&&typeof RIC!=='undefined'&&!RIC.off()&&!RIC.isPremium()){bloques.push(p.titre);continue}
    const t=await _src({src:m.src+'--'+p.id});if(t)try{P.push(JSON.parse(t))}catch(e){}}
   if(bloques.length)setTimeout(()=>toast('🔒 '+bloques.join(' · ')+' · '+Tx('pa.prem','réservé aux abonnés Premium')),900);
-  return h.slice(0,k)+'('+fusion.toString()+')(QUIZ_DATA,'+JSON.stringify(P).replace(/</g,'\\u003c')+','+JSON.stringify(off)+');\n'+h.slice(k)}catch(e){return h}};
+  return h.slice(0,k)+'('+fusion.toString()+')(QUIZ_DATA,'+JSON.stringify(P).replace(/</g,'\\u003c')+','+JSON.stringify(off)+');\n'+'('+corrAppli.toString()+')(QUIZ_DATA,'+JSON.stringify(m.id||'')+');\n'+h.slice(k)}catch(e){return h}};
+ /* corrections publiées depuis le tableau de bord (page Questions) : appliquées AUSSI aux écrans de l'appli elle-même
+    (énoncé, type QCM / QCD / ouverte, propositions, bonnes réponses, explication), par la même correspondance que les listes du portail */
+ function corrAppli(Q,MID){try{const P=window.parent;if(!P||P===window||typeof P.cleQuestion!=='function')return;
+  const QIp=P.eval('typeof QI!=="undefined"?QI:null'),PM=P.eval('typeof PROGMAP!=="undefined"?PROGMAP:null');if(!QIp||!PM)return;
+  const a=Object.values(PM).find(x=>x&&x.m===MID);if(!a)return;const L='ABCDEFGHIJKL';
+  (Q.antennes||[]).forEach(A=>(A.sujets||[]).forEach(s=>(s.questions||[]).forEach(x=>{const i=P.cleQuestion(a,x.id);if(i==null)return;const q=QIp[a.m+'.'+i];if(!q||!q.__corr)return;
+   if(q.q)x.text=q.q;if(q.x!=null)x.explanation=q.x;
+   if(q.t==='qcm'&&Array.isArray(q.o)){x.options=q.o.map((t,j)=>({letter:L[j],text:t}));const ls=(Array.isArray(q.am)&&q.am.length?q.am:[q.a]).map(j=>L[j]);
+    x.mode='mcq';x.multi=ls.length>1;x.answerLetters=ls;x.answer=ls.map(l=>l+'. '+(x.options.find(o=>o.letter===l)||{}).text).join(' ; ');if(x.type==='AUTRE')x.type=x.typeLabel='QCM'}
+   else if(q.t==='vf'){x.options=[{letter:'A',text:'Vrai'},{letter:'B',text:'Faux'}];x.mode='mcq';x.multi=false;x.answerLetters=[q.v?'A':'B'];x.answer=q.v?'A. Vrai':'B. Faux'}
+   else if(q.t==='open'){x.mode='open';x.options=[];x.answerLetters=[];x.answer=q.r||x.answer}})))}catch(e){}}
  /* ---- les mêmes sujets en questions natives : liste des sujets du cours, écran « toutes les questions » (on coche en descendant) ----
     XD['plusnat-<cours>'] = {ch, k (antenne/sujet), p (paquet), q} ajoutés APRÈS les questions d'origine : identifiants stables. */
  const NATB={};
@@ -3650,5 +3675,19 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
   const M=parts.map(nom).filter(Boolean);if(M.length<2)return h;let k=S.paMat&&M.includes(S.paMat)?S.paMat:'';
   const chip=(v,t)=>`<button class="ri-chip${v===k?' on':''}" onclick="riPaMat('${jsq(v)}')">${esc(t)}</button>`;
   if(!document.getElementById('ri-chip-css')){const c=document.createElement('style');c.id='ri-chip-css';c.textContent='.ri-pamat{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;margin:4px 0 6px;-webkit-overflow-scrolling:touch}.ri-chip{flex:0 0 auto;width:auto;border:1.5px solid var(--line,#d8dee9);background:var(--card,#fff);color:inherit;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}.ri-chip.on{background:var(--pri,#2563eb);border-color:var(--pri,#2563eb);color:#fff}';document.head.appendChild(c)}
-  return tete+`<div class="ri-pamat">${chip('',Tx('pa.all','Toutes'))}${M.map(m=>chip(m,m)).join('')}</div>`+parts.filter(p=>!k||nom(p)===k).join('')}})();
+  return (tete+`<div class="ri-pamat">${chip('',Tx('pa.all','Toutes'))}${M.map(m=>chip(m,m)).join('')}</div>`+parts.filter(p=>!k||nom(p)===k).join(''))
+   .replace(/onclick="go\('dech',\{id:'xprepade',c:(\d+)\}\)"/g,'onclick="riPaLancer($1)"')}
+ /* une série : « Dans l'ordre » ou « Ordre aléatoire » (énoncés de cas gardés ensemble), ou les autres choix (20 au hasard, chronométré…) */
+ window.riPaLancer=function(c){const mid='xprepade',ids=(QBM[mid]||[]).filter(q=>q.c===c).map(q=>q.id),lb=chName(mid,c);if(!ids.length)return;
+  if(typeof RIC!=='undefined'&&RIC.can&&!RIC.off()&&!RIC.can('matiere:'+mid)){go('dech',{id:mid,c});return}
+  let o=$('#riordre');if(o)o.remove();o=document.createElement('div');o.id='riordre';o.className='pmod';const pref=S.ordre==='alea'?'alea':'ordre';
+  o.innerHTML=`<div class="pbox"><h3>📝 ${esc(lb)}</h3><div class="muted small">${ids.length} ${esc(Tx('or.q','questions'))}</div>
+   <div class="small" style="font-weight:700;margin:12px 0 6px">${T('or.h','Comment veux-tu composer ?')}</div>
+   <button class="btn ${pref==='ordre'?'coral':'light'}" data-or="ordre" style="width:100%">${T('or.ordre','🔢 Dans l’ordre')}</button>
+   <button class="btn ${pref==='alea'?'coral':'light'}" data-or="alea" style="width:100%;margin-top:8px">${T('or.alea','🔀 Ordre aléatoire')}</button>
+   <button class="btn light" data-or="autre" style="width:100%;margin-top:8px">${T('or.autre','⚙️ Autres choix (20 au hasard, chronométré…)')}</button>
+   <button class="btn light" style="width:100%;margin-top:8px" id="riordreX">${T('ui.cancel','Annuler')}</button></div>`;
+  document.body.appendChild(o);$('#riordreX',o).onclick=()=>o.remove();o.onclick=e=>{if(e.target===o)o.remove()};
+  $$('[data-or]',o).forEach(x=>x.onclick=()=>{const v=x.dataset.or;o.remove();if(v==='autre'){go('dech',{id:mid,c});return}S.ordre=v;save();
+   const L=v==='alea'?(typeof riMelangeCas==='function'?riMelangeCas(ids.slice()):shuffle(ids.slice())):ids;startQuiz(mid,L,lb,'chap')})}})();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

@@ -2614,14 +2614,20 @@ function qxEditer(qid, reps){
     const n = {t:T, q:$('#qxe').value.trim(), s:$('#qxs').value.trim(), x:$('#qxx').value.trim()};
     if(!n.q){ toast('L’énoncé ne peut pas être vide.'); return; }
     if(T==='qcm'){ const F = OP.filter(x=>x.t.trim()); if(F.length<2){ toast('Écrivez au moins 2 propositions.'); return; } const ls = F.map((x,i)=>x.ok?i:-1).filter(i=>i>=0); if(!ls.length){ toast('Cochez la ou les bonnes réponses.'); return; }
-      n.o = F.map(x=>x.t.trim()); n.a = ls[0]; n.am = ls.length>1 ? ls : null; n.v = null; }
-    else if(T==='vf'){ if(VV==null){ toast('Touchez « Vrai » ou « Faux ».'); return; } n.v = VV; n.o = null; n.a = null; n.am = null; }
+      n.o = F.map(x=>x.t.trim()); n.a = ls[0]; n.am = ls.length>1 ? ls : null; n.v = null; if(q0.r!=null) n.r = null; if(q0.acc!=null) n.acc = null; }
+    else if(T==='vf'){ if(VV==null){ toast('Touchez « Vrai » ou « Faux ».'); return; } n.v = VV; n.o = null; n.a = null; n.am = null; if(q0.r!=null) n.r = null; if(q0.acc!=null) n.acc = null; }
     else { const L = $('#qxr').value.split('\n').map(x=>x.trim()).filter(Boolean); if(!L.length){ toast('Écrivez la réponse attendue.'); return; } n.r = L[0]; n.acc = L.slice(1); n.o = null; n.a = null; n.am = null; n.v = null; }
     const champs = {}; Object.keys(n).forEach(k=>{ const a = n[k]==null||n[k]===''?null:n[k], b = q0[k]==null||q0[k]===''?null:q0[k]; if(JSON.stringify(a)!==JSON.stringify(b)) champs[k] = n[k]===''?null:n[k]; });
     if(!Object.keys(champs).length){ toast('Rien n’a changé.'); return; }
     const b = $('#mok'); b.disabled = true; b.textContent = 'Publication…';
     try{
-      if(MODE==='supabase' && SB){ const {data,error} = await SB.rpc('publier_correction', {p_qid:qid, p_champs:champs, p_note:$('#qxn').value.trim()||null}); if(error) throw error; if(!data || !data.ok) throw new Error('Correction refusée.'); }
+      /* une question déjà corrigée : on GARDE les champs de la correction précédente (énoncé, réponse…) et on y ajoute les nouveaux,
+         sinon la nouvelle correction remplaçait l'ancienne (ex. énoncé corrigé puis réponse corrigée : l'énoncé était perdu) */
+      if(MODE==='supabase' && SB){ try{ const {data,error} = await SB.rpc('corrections_liste'); if(!error && Array.isArray(data)) QX.corr = data; }catch(e){} }
+      const avant = (QX.corr||[]).find(c=>c.qid===qid && c.actif);
+      if(avant && avant.c && typeof avant.c==='object') Object.keys(avant.c).forEach(k=>{ if(!(k in champs)) champs[k] = avant.c[k]; });
+      if(MODE==='supabase' && SB){ const {data,error} = await SB.rpc('publier_correction', {p_qid:qid, p_champs:champs, p_note:$('#qxn').value.trim()||null}); if(error) throw error; if(!data || !data.ok) throw new Error('Correction refusée.');
+        const L = QX.corr = (QX.corr||[]).filter(c=>c.qid!==qid); L.unshift({id:data.id, qid, c:JSON.parse(JSON.stringify(champs)), note:$('#qxn').value.trim()||null, actif:true, t:data.t}); }
       try{ const W = QX.W, Q = W.eval('QI['+JSON.stringify(qid)+']'); Object.keys(champs).forEach(k=>{ if(champs[k]===null) delete Q[k]; else Q[k] = JSON.parse(JSON.stringify(champs[k])); }); Q.__corr = 1; }catch(e){}
       let nr = 0;
       if($('#qxpre') && $('#qxpre').checked && MODE==='supabase' && SB){ const txt = 'Merci pour ton signalement ! La question a été corrigée'+(T==='qcm'?' : la bonne réponse est maintenant '+OP.filter(x=>x.t.trim()).map((x,i)=>x.ok?QL[i]:'').filter(Boolean).join(', ')+'.':T==='vf'?' : la bonne réponse est « '+(VV?'Vrai':'Faux')+' ».':'.');
