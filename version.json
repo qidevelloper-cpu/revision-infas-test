@@ -1,7 +1,7 @@
 {
- "v": "0b8b9a314e",
+ "v": "0291dcef0a",
  "date": "2026-10-25",
- "sig": "0960328435e7d101e65909272736cb9eff78fefd",
+ "sig": "ec645de4f175163717f02c7b42916cc84932667c",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
@@ -9,6 +9,10 @@
   {
    "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
    "m": "xmvkq4zed"
+  },
+  {
+   "t": "🔄 Cours mis à jour : Tous les sujets prépa D.E",
+   "m": "xprepade"
   },
   {
    "t": "📘 Nouveau cours : Médecine — Annales corrigées L3 IDE",
@@ -94,7 +98,7 @@
   },
   "xprepade": {
    "t": "Tous les sujets prépa D.E",
-   "h": "6062aad8d5368b6f520739ab23b51737fac1dad0"
+   "h": "51a9644ac09ec37b3bdaa472a9b711bebffb6cd2"
   },
   "xformules": {
    "t": "Réviser les formules",
@@ -119,7 +123,7 @@
  },
  "hist": [
   {
-   "v": "0b8b9a314e",
+   "v": "0291dcef0a",
    "date": "2026-10-25",
    "notes": [
     {
@@ -128,6 +132,10 @@
     {
      "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
      "m": "xmvkq4zed"
+    },
+    {
+     "t": "🔄 Cours mis à jour : Tous les sujets prépa D.E",
+     "m": "xprepade"
     },
     {
      "t": "📘 Nouveau cours : Médecine — Annales corrigées L3 IDE",

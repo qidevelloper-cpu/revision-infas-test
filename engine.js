@@ -2980,6 +2980,9 @@ function revTitre(m){if(!m)return'';if(m.revTitre)return m.revTitre;const b=Stri
 const DOCREV={};
 (function(){if(typeof applyContent!=='function'||typeof DATA0==='undefined')return;
  function injecter(){Object.keys(XD).forEach(k=>{if(!k.startsWith('revisions-'))return;const mid=k.slice(10),R=XD[k];if(DOCREV[mid]||!R||!Array.isArray(R.sujets))return;
+   const X=XD[mid];if(X&&Array.isArray(X.q)&&Array.isArray(X.ch)&&!(DATA0.q&&Array.isArray(DATA0.q[mid]))){   /* cours en données à part (ex. Tous les sujets prépa D.E) */
+    if(X.__rev===R)return;const n0q=X.q.length,n0ch=X.ch.length,tit=R.sujets.map(x=>x.t);
+    X.q=X.q.concat(...R.sujets.map((x,j)=>x.q.map(q=>Object.assign({},q,{c:n0ch+j}))));X.ch=X.ch.concat(tit);X.__rev=R;DOCREV[mid]={n0q,n0ch,tit};return}
    const m=(DATA0.mat||[]).find(x=>x.id===mid);if(!m||!DATA0.q||!Array.isArray(DATA0.q[mid])||!Array.isArray(m.ch))return;
    const n0q=DATA0.q[mid].length,n0ch=m.ch.length,tit=R.sujets.map(x=>x.t);
    DATA0.q[mid]=DATA0.q[mid].concat(...R.sujets.map((x,j)=>x.q.map(q=>Object.assign({},q,{c:n0ch+j}))));m.ch=m.ch.concat(tit);
@@ -3636,4 +3639,16 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  sujListeHTML=function(m){const h=_sl.apply(this,arguments);const G=m&&MATI[m.id]&&MATI[m.id].groupesSujets;if(!Array.isArray(G)||!G.length)return h;
   const rows=h.split(/(?=<div class="suj sf)/);if(!rows.length||!/^<div class="suj sf/.test(rows[0]))return h;const avant={};G.forEach(g=>{const k=Math.min(...(g.k||[]));if(isFinite(k))avant[k]=g.t});
   return rows.map((r,k)=>(avant[k]?`<div class="rc-sub ri-gsuj"${k?' style="margin-top:12px"':''}>📘 ${esc(avant[k])}</div>`:'')+r).join('')}})();
+/* ======================= « TOUS LES SUJETS PRÉPA D.E » : CHOIX DE LA MATIÈRE EN HAUT DE LA PAGE =======================
+   Boutons « Toutes · Santé infantile · Santé publique · Médecine… » (matières = début des titres des séries, « Matière · … ») ;
+   le choix est gardé (S.paMat). Les sections, séries et examens blancs restent ceux de la page. */
+(function(){const b=BLK['prepall.main'];if(!b)return;const _h=b.html;
+ window.riPaMat=function(k){S.paMat=k;save();render();window.scrollTo(0,0);setTimeout(()=>{const c=document.querySelector('.ri-chip.on'),r=c&&c.parentNode;if(r)r.scrollLeft=Math.max(0,c.offsetLeft-r.offsetLeft-16)},30)};
+ b.html=function(){const h=_h.apply(this,arguments);if(!h||h.indexOf('<div class="secT">')<0)return h;
+  const parts=h.split(/(?=<div class="secT">)/),tete=parts[0].indexOf('<div class="secT">')===0?'':parts.shift();
+  const nom=p=>{const m=p.match(/^<div class="secT">🎓 ([^<]*)<span/);return m?m[1].replace(/&amp;/g,'&').replace(/&#39;/g,"'").replace(/&quot;/g,'"'):''};
+  const M=parts.map(nom).filter(Boolean);if(M.length<2)return h;let k=S.paMat&&M.includes(S.paMat)?S.paMat:'';
+  const chip=(v,t)=>`<button class="ri-chip${v===k?' on':''}" onclick="riPaMat('${jsq(v)}')">${esc(t)}</button>`;
+  if(!document.getElementById('ri-chip-css')){const c=document.createElement('style');c.id='ri-chip-css';c.textContent='.ri-pamat{display:flex;gap:8px;overflow-x:auto;padding:2px 0 10px;margin:4px 0 6px;-webkit-overflow-scrolling:touch}.ri-chip{flex:0 0 auto;width:auto;border:1.5px solid var(--line,#d8dee9);background:var(--card,#fff);color:inherit;border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}.ri-chip.on{background:var(--pri,#2563eb);border-color:var(--pri,#2563eb);color:#fff}';document.head.appendChild(c)}
+  return tete+`<div class="ri-pamat">${chip('',Tx('pa.all','Toutes'))}${M.map(m=>chip(m,m)).join('')}</div>`+parts.filter(p=>!k||nom(p)===k).join('')}})();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
