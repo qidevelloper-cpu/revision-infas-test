@@ -1655,6 +1655,7 @@ VIEWS.paiements = ()=>{
   const ops = Object.keys(OPS).map(k=>{ const v=val.filter(x=>x.operateur===k); return `<div class="lvl"><div class="t"><span class="dot" style="background:${OPS[k][1]}"></span>${OPS[k][0]}</div><div class="n num">${fcfa(sum(v))}</div><div class="s">${v.length} paiement${v.length>1?'s':''} validé${v.length>1?'s':''} · ${cfg.numeros&&cfg.numeros[k]?'numéro '+esc(cfg.numeros[k]):'non proposé'}</div></div>`; }).join('');
   return headHTML('Paiements', 'Paiements Mobile Money déclarés par les élèves. Vérifie la réception sur ton téléphone avant de valider.',
     `${MODE==='supabase'?'<button class="btn" id="payreload">Actualiser</button>':'<span class="demo">Paiements fictifs de test</span>'}<button class="btn" id="paycsv">${ic('dl')}Exporter en CSV</button>`) +
+  (cfg.visible!==true ? `<div class="card" style="margin-bottom:18px;border:2px solid var(--amber)"><b>Paiement et offres masqués aux élèves.</b> <span class="muted">Rien de payant n’est visible dans l’appli et tous les élèves sont Premium. Pour les rendre visibles : page Offres.</span> <button class="btn sm" onclick="go('offres')">Ouvrir Offres</button></div>` : '') +
   (cfg.actif ? '' : `<div class="card" style="margin-bottom:18px;border:2px solid var(--amber)"><b>Le paiement est fermé dans l’appli.</b> <span class="muted">Les élèves ne voient pas encore le bouton « Payer ». Renseigne tes numéros et ouvre le paiement dans Réglages.</span> <button class="btn sm" data-page="reglages" style="margin-left:6px">Ouvrir les réglages</button></div>`) +
   (DB.paymentsErreur ? `<div class="card" style="margin-bottom:18px;border:2px solid var(--red)"><b>Paiements illisibles :</b> ${esc(DB.paymentsErreur)} <span class="muted">Lance d’abord supabase-paiements.sql dans Supabase.</span></div>` : '') + `
   <div class="grid kpis">
@@ -2487,7 +2488,11 @@ function ofPrix(p, c){ const base = +p.prix||0, pr = c.promo, t = Date.now();
 VIEWS.offres = () => { const c = ofCfg(), f = c.f, m = c.mode, plans = DB.plans || [], t = Date.now();
   const prOn = c.promo.actif && c.promo.au && Date.parse(c.promo.au) > t;
   const ccJ = c.concours.date ? Math.round((Date.parse(c.concours.date+'T00:00:00') - Date.parse(new Date().toISOString().slice(0,10)+'T00:00:00'))/864e5) : null;
+  const vis = ((DB.paiementCfg||{}).visible)===true;
   return headHTML('Offres', 'Tout ce que voient les élèves non Premium : verrous, bouton « Débloquer », essai, formules, promotions.', OF_UNDO.length ? `<button class="btn" id="ofundo">↩️ Annuler la dernière modification</button>` : '') + `
+  <div class="card" style="margin-bottom:18px;border:2px solid ${vis?'var(--line)':'var(--amber)'}"><div class="cardhead"><div class="grow"><h3>💳 Paiement et offres visibles par les élèves</h3>
+    <p class="sub">${vis?'<b>Visibles</b> : les élèves voient les prix, le bouton « Payer », les numéros Mobile Money et les offres de cette page.':'<b>Masqués</b> : aucun prix, bouton « Payer », numéro Mobile Money, offre, promotion ni « Faire payer un parent » dans l’appli. <b>Tous les élèves sont Premium</b> (« MEMBRE PREMIUM », tout ouvert, sauf ce que tu as masqué).'}</p></div>
+    <button class="btn ${vis?'':'pri'}" id="ofvis">${vis?'🙈 Masquer aux élèves':'👁️ Rendre visible aux élèves'}</button></div></div>` + `
   <div class="card"><div class="cardhead"><div class="grow"><h3>Mode des offres</h3><p class="sub">${m ? 'Mode actuel : <b>'+OF_MODES[m].nom+'</b>' : 'Aucun mode choisi : l’appli fonctionne comme avant (règles de « Cours gratuits / Premium » seulement).'}</p></div></div>
     <div class="grid accgrid">${Object.entries(OF_MODES).map(([k,x])=>`<button class="card" data-ofmode="${k}" style="text-align:left;cursor:pointer;border:2px solid ${m===k?'var(--pri,#6C3BF5)':'var(--line)'};${m===k?'background:var(--soft,#f4f2fb)':''}"><b>${x.nom}</b>${m===k?' <span class="pill">actif</span>':''}<p class="sub" style="margin:6px 0 0">${x.d}</p></button>`).join('')}</div>
     ${m ? `<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn sm" id="ofoff">Désactiver les offres (revenir à avant)</button></div>` : ''}</div>
@@ -2546,6 +2551,11 @@ async function ofStatsCharger(){ const el = $('#ofstats'); if(!el || MODE!=='sup
   const e2 = $('#ofstats'); if(e2){ e2.classList.remove('muted'); e2.innerHTML = ofStatsHTML(OFS); } }
 const ofSet = (o, path, v) => { const k = path.split('.'); let x = o; while(k.length > 1) x = x[k.shift()]; x[k[0]] = v; };
 AFTER.offres = () => {
+  $('#ofvis').onclick = ()=>{ const vis = ((DB.paiementCfg||{}).visible)===true;
+    confirmModal(vis ? 'Masquer le paiement et les offres ?' : 'Rendre le paiement et les offres visibles ?',
+      vis ? 'Les élèves ne verront plus aucun prix, bouton « Payer », numéro Mobile Money, offre ni promotion, jusqu’à ce que tu les rendes visibles ici. Pendant ce temps, tous les élèves sont Premium : tout est ouvert (sauf ce que tu as masqué) et ils voient « MEMBRE PREMIUM ».'
+          : 'Les élèves verront de nouveau les prix, le bouton « Payer » (si le paiement est ouvert dans Réglages) et les offres réglées sur cette page. Les règles d’accès normales reviennent : seuls les élèves qui ont payé ou activé un code restent Premium.',
+      vis ? 'Masquer' : 'Rendre visible', ()=>{ DB.paiementCfg = Object.assign(PAY_DEFAUT(), DB.paiementCfg||{}, {visible:!vis}); audit(vis ? 'Paiement et offres masqués aux élèves' : 'Paiement et offres visibles par les élèves', 'Offres'); persist(); toast(vis ? 'Paiement et offres masqués aux élèves.' : 'Paiement et offres de nouveau visibles.'); render(); }); };
   document.querySelectorAll('[data-ofmode]').forEach(b=>b.onclick=()=>{ const k = b.dataset.ofmode, x = OF_MODES[k], c0 = ofCfg();
     if(k==='perso'){ ofPerso.garder = true; ofPerso(c=>{ c.mode = 'perso'; }, 'Offres : mode Personnalisé'); ofPerso.garder = false; toast('Mode Personnalisé : règle chaque élément ci-dessous.'); return; }
     const warn = k==='concours' && !c0.concours.date ? '<br><br><b>Pense à choisir la date du concours</b> dans « Leviers » : sans date, le compte à rebours ne s’affiche pas.' : '';
