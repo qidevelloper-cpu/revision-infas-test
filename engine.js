@@ -1148,9 +1148,9 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
     }
     preview();
   }
-  function open() { if (!ov) build(); ov.classList.remove('hidden'); preview(); requestAnimationFrame(() => ov._applyP && ov._applyP()); }
+  function open(force) { if (force !== true && typeof window.RI_CALC_GUARD === 'function' && !window.RI_CALC_GUARD()) return; if (!ov) build(); ov.classList.remove('hidden'); preview(); requestAnimationFrame(() => ov._applyP && ov._applyP()); }
   function close() { if (ov) ov.classList.add('hidden'); }
-  window.openCalculator = open; window.closeCalculator = close;
+  window.openCalculator = open; window.closeCalculator = close; window.__calcOuvrir = () => open(true);
   // clavier physique
   document.addEventListener('keydown', e => {
     if (!ov || ov.classList.contains('hidden')) return;
@@ -2241,11 +2241,11 @@ const RIC={
     get('announcements?select=id,titre,texte,cible,couleur,du,au')]);
    const regles={};rules.forEach(r=>{regles[r.cle]=r.quota_gratuit==null?{acces:r.acces}:{acces:r.acces,quotaGratuit:r.quota_gratuit}});
    const sv=k=>{const x=sets.find(r=>r.cle===k);return(x&&x.valeur)||{}};const pa=sv('public.access'),pay=sv('public.paiement');
-   const old=JSON.stringify(RIC.cfg.regles)+RIC.cfg.defaut+JSON.stringify(RIC.cfg.annonces)+JSON.stringify(RIC.cfg.questions||{})+JSON.stringify(RIC.cfg.promo||null);
+   const old=JSON.stringify(RIC.cfg.regles)+RIC.cfg.defaut+JSON.stringify(RIC.cfg.annonces)+JSON.stringify(RIC.cfg.questions||{})+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null);
    let google=false;try{const r=await fetch(RIC.url+'/auth/v1/settings',{headers:H(),cache:'no-store'});if(r.ok){const j=await r.json();google=!!(j.external&&j.external.google)}}catch(e){}
-   RIC.cfg={regles,defaut:pa.defaut==='premium'?'premium':'gratuit',version:pa.version||0,questions:(pa.questions&&typeof pa.questions==='object')?pa.questions:{},plusapp:(pa.plusapp&&typeof pa.plusapp==='object')?pa.plusapp:{},plans,annonces:ann,google,paiement:pay,promo:(pa.promo&&typeof pa.promo==='object')?pa.promo:null,fincorr:(pa.fincorr&&typeof pa.fincorr==='object')?pa.fincorr:{},t:Date.now()};
+   RIC.cfg={regles,defaut:pa.defaut==='premium'?'premium':'gratuit',version:pa.version||0,questions:(pa.questions&&typeof pa.questions==='object')?pa.questions:{},plusapp:(pa.plusapp&&typeof pa.plusapp==='object')?pa.plusapp:{},plans,annonces:ann,google,paiement:pay,promo:(pa.promo&&typeof pa.promo==='object')?pa.promo:null,fincorr:(pa.fincorr&&typeof pa.fincorr==='object')?pa.fincorr:{},nosig:(pa.nosig&&typeof pa.nosig==='object')?pa.nosig:{},offres:(pa.offres&&typeof pa.offres==='object')?pa.offres:null,t:Date.now()};
    LS.set(RIC.CK,RIC.cfg);RIC.ready=true;
-   if(old!==JSON.stringify(regles)+RIC.cfg.defaut+JSON.stringify(ann)+JSON.stringify(RIC.cfg.questions)+JSON.stringify(RIC.cfg.promo||null)&&typeof render==='function'&&!EDITMODE&&!quiet)render();
+   if(old!==JSON.stringify(regles)+RIC.cfg.defaut+JSON.stringify(ann)+JSON.stringify(RIC.cfg.questions)+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null)&&typeof render==='function'&&!EDITMODE&&!quiet)render();
   }catch(e){console.warn('RI cloud : règles non mises à jour',e)}
   RIC.busy=false;flush()}
  RIC.refresh=refresh;
@@ -2280,12 +2280,15 @@ const RIC={
  RIC.qOk=qid=>{const q=QI[qid];if(!q)return true;return RIC.can('matiere:'+q.m+'/sujet:'+sujetNo(qid))};
 
  /* ---------- statistiques anonymes ---------- */
- function track(nom,props){if(RIC.off())return;try{const q=LS.get(RIC.QK,[]);q.push({nom,appareil:device(),props:Object.assign({fil:S&&S.fil||'',niv:S&&S.niv||''},props||{}),created_at:new Date().toISOString()});LS.set(RIC.QK,q.slice(-300));flush()}catch(e){}}
+ function track(nom,props){if(RIC.off())return;try{const q=LS.get(RIC.QK,[]);q.push({nom,appareil:device(),props:Object.assign({fil:S&&S.fil||'',niv:S&&S.niv||''},S&&String(S.name||'').trim()?{nom:String(S.name).trim().slice(0,60)}:{},props||{}),created_at:new Date().toISOString()});LS.set(RIC.QK,q.slice(-300));flush()}catch(e){}}
  RIC.track=track;
  let flushing=false;
  async function flush(){if(flushing||!navigator.onLine)return;const q=LS.get(RIC.QK,[]);if(!q.length)return;flushing=true;
   try{await post('events',q.slice(0,100).map(e=>Object.assign({user_id:null},e)));LS.set(RIC.QK,LS.get(RIC.QK,[]).slice(Math.min(100,q.length)))}
-  catch(e){/* refus définitif (4xx) : on écarte ce lot pour ne pas bloquer la file ; coupure réseau : on réessaiera */if(/^4\d\d /.test(e.message))LS.set(RIC.QK,LS.get(RIC.QK,[]).slice(Math.min(100,q.length)));console.warn('RI cloud : statistiques en attente',e)}
+  catch(e){/* refus définitif (4xx) : une seule statistique refusée ne doit pas faire perdre tout le lot → on renvoie une par une
+     et on n'écarte que celles qui sont refusées ; coupure réseau : on réessaiera */
+   if(/^4\d\d /.test(e.message)){const lot=q.slice(0,100);let refus=0;for(const x of lot){try{await post('events',[Object.assign({user_id:null},x)])}catch(e2){if(!/^4\d\d /.test(e2.message))break;refus++}}
+    LS.set(RIC.QK,LS.get(RIC.QK,[]).slice(lot.length));if(refus)console.warn('RI cloud : '+refus+' statistique(s) refusée(s)')}else console.warn('RI cloud : statistiques en attente',e)}
   flushing=false}
  RIC.flush=flush;
  window.addEventListener('online',()=>{if(!RIC.off())refresh(true)});
@@ -2318,7 +2321,7 @@ const RIC={
   try{await post('reports',[row])}
   catch(e){if(!/^4\d\d /.test(e.message)||!/photo|eleve|column/i.test(e.message))throw e;
    const r2=Object.assign({},row);if(r2.photo)r2.message=(r2.message+'\n[📷 photo : '+r2.photo+']').slice(0,1100);if(r2.eleve)r2.message=(r2.message+'\n['+r2.eleve+']').slice(0,1200);delete r2.photo;delete r2.eleve;await post('reports',[r2])}}
- RIC.report=function(qid){const q=QI[qid];if(!q)return;let o=$('#rirep');if(o)o.remove();o=document.createElement('div');o.id='rirep';o.className='pmod';let photo=null,b64=null;
+ RIC.report=function(qid){const q=QI[qid];if(!q)return;if((RIC.cfg.nosig||{})[qid]){toast('Cette question a déjà été vérifiée par l’enseignant ✅');return}let o=$('#rirep');if(o)o.remove();o=document.createElement('div');o.id='rirep';o.className='pmod';let photo=null,b64=null;
   const m=(typeof matOf==='function'&&matOf(q.m))||{};
   o.innerHTML=`<div class="pbox"><h3>⚑ Signaler une erreur</h3><div class="muted small" style="margin-bottom:8px"><b>${esc(m.short||m.title||q.m)}</b> · ${esc(q.q).slice(0,240)}</div>
    <textarea class="tin" id="rirepT" rows="4" maxlength="1000" placeholder="Explique l’erreur : mauvaise réponse, faute, image manquante… Tu peux proposer la bonne réponse."></textarea>
@@ -2516,7 +2519,7 @@ ${auto?`    <div class="ri-envoi"><div>Tu paies <b>${fcfa(P.prix_xof)}</b> direc
      try{const t=await token();if(!t){m('Connecte-toi d’abord à ton compte.');b.disabled=false;return}
       const r=await fetch(RIC.url+'/functions/v1/wave-checkout',{method:'POST',headers:Object.assign(H(),{Authorization:'Bearer '+t}),body:JSON.stringify({plan})});const j=await r.json().catch(()=>({}));
       if(!j.ok||!j.url){m(RAISON[j.raison]||(j.raison==='wave'?'Wave ne répond pas pour le moment, réessaie dans un instant.':'Paiement impossible pour le moment, réessaie.'));b.disabled=false;return}
-      track('paiement_wave',{plan});LS.set('ri_wave_attente',Date.now());location.href=j.url}
+      track('paiement_wave',{plan});LS.set('ri_wave_attente',Date.now());if(RIC.__nouvelOnglet&&window.open(j.url,'_blank')){o.remove();RIC.info('Paiement Wave ouvert','Paie dans Wave puis reviens ici : ton accès s’active tout seul, sans perdre ta composition.')}else location.href=j.url}
      catch(e){m(/fetch|network|Load failed/i.test(e.message)?'Pas de connexion internet.':'Paiement impossible pour le moment, réessaie.');b.disabled=false}};return}
    if($('#riWLien',o))$('#riWLien',o).onclick=()=>{keep();track('paiement_wave_lien',{plan});setTimeout(()=>{const t=$('#riTel',o);if(t&&!t.value)t.focus()},800)};$('#riCopy',o).onclick=()=>{try{navigator.clipboard.writeText(String(num).replace(/\s/g,''));toast('Numéro copié')}catch(e){toast(num)}};
    $('#riPX',o).onclick=()=>o.remove();
@@ -2530,7 +2533,9 @@ ${auto?`    <div class="ri-envoi"><div>Tu paies <b>${fcfa(P.prix_xof)}</b> direc
   draw()};
  /* ---------- décorations après chaque affichage ---------- */
  function annonces(){if(!S||!S.onb)return'';const vu=LS.get(RIC.VK,{}),t=today(),prem=RIC.isPremium(),niv=S.fil&&S.niv?filBase(S.fil)+'-'+S.niv:'';
-  return(RIC.cfg.annonces||[]).filter(a=>!vu[a.id]&&a.du<=t&&a.au>=t&&(a.cible==='tous'||(a.cible==='premium'&&prem)||(a.cible==='gratuit'&&!prem)||a.cible===niv))
+  const moi=(()=>{try{const tk=RIC.session&&RIC.session.access_token;return tk?String(JSON.parse(atob(tk.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub||''):''}catch(e){return''}})(),dev=RIC.device();
+  const vise=c=>String(c||'').split(',').map(x=>x.trim()).some(x=>x==='tous'||(x==='premium'&&prem)||(x==='gratuit'&&!prem)||x===niv||(x.startsWith('fil:')&&S.fil&&filBase(S.fil)===x.slice(4))||(x.startsWith('niv:')&&S.niv===x.slice(4))||(x.startsWith('app:')&&x.slice(4)===dev)||(x.startsWith('uid:')&&moi&&x.slice(4)===moi));
+  return(RIC.cfg.annonces||[]).filter(a=>!vu[a.id]&&a.du<=t&&a.au>=t&&vise(a.cible))
    .map(a=>`<div class="ri-ann" style="background:${esc(/^#[0-9a-f]{3,8}$/i.test(a.couleur)?a.couleur:'#6C3BF5')}"><div><b>${esc(a.titre)}</b> — ${esc(a.texte)}</div><button aria-label="Masquer l’annonce" onclick="RIC.hideAnn('${jsq(a.id)}')">✕</button></div>`).join('')}
  RIC.hideAnn=id=>{const v=LS.get(RIC.VK,{});v[id]=1;LS.set(RIC.VK,v);$$('.ri-ann').forEach(x=>{if(x.innerHTML.includes(id))x.remove()});render()};
  function badge(t,cls){return `<span class="ri-b ${cls}">${t}</span>`}
@@ -2550,7 +2555,7 @@ ${auto?`    <div class="ri-envoi"><div>Tu paies <b>${fcfa(P.prix_xof)}</b> direc
   if(VIEW==='fil'&&FILS){const lockEx=!RIC.can('fonction:explications');
    $$('.filq',app).forEach(card=>{const fb=$('.fb',card);if(!fb)return;
     if(lockEx)$$('.ex,.xbox',card).forEach(x=>{if(x.classList.contains('ri-lockx'))return;x.innerHTML='🔒 <b>Explication réservée aux élèves Premium.</b> <a href="#" onclick="RIC.paywall(\'fonction:explications\',\'Explications · Premium\');return false">Voir l’offre</a>';x.classList.add('ri-lockx')});
-    if(!$('.ri-rep',card)){const qid=card.id.replace(/^fq-/,'');card.insertAdjacentHTML('beforeend',`<button class="ri-rep" onclick="RIC.report('${jsq(qid)}')">⚑ Signaler une erreur dans cette question</button>`)}})}}
+    if(!$('.ri-rep',card)){const qid=card.id.replace(/^fq-/,'');if((RIC.cfg.nosig||{})[qid])return;card.insertAdjacentHTML('beforeend',`<button class="ri-rep" onclick="RIC.report('${jsq(qid)}')">⚑ Signaler une erreur dans cette question</button>`)}})}}
  if(typeof render==='function'){const _render=render;render=function(){const r=_render.apply(this,arguments);try{decorate()}catch(e){console.warn('RI cloud',e)}return r};}
 
  /* ---------- styles ---------- */
@@ -2751,7 +2756,11 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
  const offDe=src=>((E.content&&E.content.plusOff)||{})[src]||[];
  function fusion(Q,P,OFF){(P||[]).forEach(p=>(p.antennes||[]).forEach(a=>{let A=Q.antennes.find(x=>x.slug===a.slug);
    if(!A){A={name:a.name,slug:a.slug,count:0,sujets:[]};Q.antennes.push(A)}
-   a.sujets.forEach(s=>{if(A.sujets.some(x=>x.slug===s.slug))return;A.sujets.push(s);A.count=(A.count||0)+s.questions.length})}));
+   a.sujets.forEach(s=>{if(A.sujets.some(x=>x.slug===s.slug))return;
+    /* sujet « dans » un sujet existant : ses questions s'insèrent après la question « apres » (les anciennes gardent leurs identifiants) */
+    const H=s.dans&&A.sujets.find(x=>x.slug===s.dans);if(H){const L=H.questions=(H.questions||[]).slice();
+     s.questions.forEach(q=>{const i=L.findIndex(x=>x.id===q.apres);if(i<0)L.push(q);else L.splice(i+1,0,q)});H.count=L.length;A.count=(A.count||0)+s.questions.length;return}
+    A.sujets.push(s);A.count=(A.count||0)+s.questions.length})}));
   const off=new Set(OFF||[]);Q.antennes=Q.antennes.filter(a=>!off.has(a.slug)).map(a=>{a.sujets=a.sujets.filter(s=>!off.has(a.slug+'/'+s.slug));return a}).filter(a=>a.sujets.length);
   Q.total=Q.antennes.reduce((t,a)=>t+a.sujets.reduce((u,s)=>u+(s.questions||[]).length,0),0)}
  const _src=appSource;window.appSourceBrut=_src;
@@ -3368,4 +3377,263 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  setInterval(demander,3000);
 })();
 
+/* =========================================================
+   TEMPS PASSÉ · trace « temps » (secondes passées appli ouverte et visible), envoyée par paquets pour le tableau de bord
+   RÉPONSES AUX SIGNALEMENTS · l'administrateur répond depuis le tableau de bord ; l'élève qui a signalé la voit à l'accueil
+   ========================================================= */
+(function(){
+ const LK='ri_tps';let vu=Date.now();
+ const lire=()=>{try{return +(localStorage.getItem(LK)||0)||0}catch(e){return 0}},ecrire=v=>{try{localStorage.setItem(LK,String(Math.max(0,Math.round(v))))}catch(e){}};
+ function compter(){if(document.hidden){vu=Date.now();return}const t=Date.now(),d=Math.min(60,(t-vu)/1000);vu=t;if(d>0)ecrire(lire()+d)}
+ function envoyer(min){try{compter();const v=lire();if(v<(min||300)||typeof RIC==='undefined'||!RIC.track||(RIC.off&&RIC.off()))return;ecrire(0);RIC.track('temps',{s:Math.min(3600,Math.round(v))})}catch(e){}}
+ setInterval(()=>{compter();if(lire()>=300)envoyer(300)},30e3);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden){compter();envoyer(30)}else vu=Date.now()});
+ window.riTemps={compter,envoyer,lire};
+
+ const VK='ri_rep_vus';
+ const vus=()=>{try{return JSON.parse(localStorage.getItem(VK)||'[]')}catch(e){return[]}};
+ let dern=0,enCours=false;
+ async function verifier(force){try{
+  if(enCours||typeof RIC==='undefined'||!RIC.url||!RIC.key||(RIC.off&&RIC.off())||!navigator.onLine)return;const t=Date.now();if(!force&&t-dern<10*60e3)return;dern=t;enCours=true;
+  const r=await fetch(RIC.url+'/rest/v1/rpc/mes_reponses_signalements',{method:'POST',headers:{apikey:RIC.key,'Content-Type':'application/json'},body:JSON.stringify({p_appareil:RIC.device()})});
+  if(!r.ok)return;const L=await r.json();if(!Array.isArray(L))return;const V=vus();window.__riReps=L;const n=L.filter(x=>x&&x.id&&!V.includes(x.id));if(n.length)montrer(n)}catch(e){}finally{enCours=false}}
+ function montrer(L){const x=L[0];if(!x||document.getElementById('rirepo'))return;
+  if(/[?&]compo=/.test(location.search)||document.getElementById('rinom')||!(S&&S.onb)){setTimeout(()=>montrer(L),8000);return}
+  const m=(typeof matOf==='function'&&matOf(x.mat))||{},cor=x.type==='corrigee';
+  const o=document.createElement('div');o.id='rirepo';o.className='pmod';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');
+  o.innerHTML=`<div class="pbox"><div style="font-size:38px;text-align:center;line-height:1">📩</div>
+   <h3 style="text-align:center;margin:8px 0 4px">${esc(Tx('rep.t','Réponse à ton signalement'))}</h3>
+   <div style="text-align:center;margin-bottom:10px"><span style="display:inline-block;padding:4px 12px;border-radius:999px;font-weight:800;font-size:13.5px;${cor?'background:#e7f8ee;color:#166534':'background:#eef2ff;color:#3730a3'}">${cor?esc(Tx('rep.cor','✅ Réponse corrigée')):esc(Tx('rep.ecl','💡 Éclaircissement sur la réponse'))}</span></div>
+   <div class="muted small" style="margin-bottom:6px"><b>${esc(m.short||m.title||x.mat||'')}</b> · ${esc(String(x.question||'')).slice(0,220)}</div>
+   ${x.message?`<div class="small" style="opacity:.75;margin-bottom:10px">${esc(Tx('rep.toi','Ton message :'))} « ${esc(String(x.message).slice(0,200))} »</div>`:''}
+   <div style="background:var(--tint,#f3f6f5);border-radius:14px;padding:12px 14px;font-size:15.5px;line-height:1.45;white-space:pre-wrap">${esc(x.reponse||'')}</div>
+   <div class="row2" style="margin-top:14px"><button class="btn coral" id="rirepoOk">${esc(Tx('rep.ok','J’ai compris'))}</button>${x.qid&&QI[x.qid]?`<button class="btn light" id="rirepoQ">${esc(Tx('rep.voir','Voir la question'))}</button>`:''}</div></div>`;
+  document.body.appendChild(o);
+  const fini=()=>{const V=vus();if(!V.includes(x.id))V.push(x.id);try{localStorage.setItem(VK,JSON.stringify(V.slice(-200)))}catch(e){}o.remove();try{RIC.track&&RIC.track('reponse_lue',{type:x.type||''})}catch(e){}const reste=L.slice(1);if(reste.length)setTimeout(()=>montrer(reste),600)};
+  document.getElementById('rirepoOk').onclick=fini;
+  const bq=document.getElementById('rirepoQ');if(bq)bq.onclick=()=>{fini();try{const q=QI[x.qid];if(typeof startFil==='function'&&q)startFil(q.m,[x.qid],Tx('rep.q','Question signalée'))}catch(e){}};
+ }
+ window.riReponses=verifier;
+ setTimeout(()=>verifier(true),7000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>verifier(false),2000)});
+})();
+
+/* =========================================================
+   « EN CE MOMENT » AVEC LE NOM · toutes les 90 s, appli ouverte et visible : téléphone, nom, filière, licence (et compte s'il y en a un)
+   ========================================================= */
+(function(){
+ let der=0;
+ async function ping(force){try{
+  if(typeof RIC==='undefined'||!RIC.url||!RIC.key||(RIC.off&&RIC.off())||document.hidden||!navigator.onLine)return;const t=Date.now();if(!force&&t-der<80e3)return;der=t;
+  const body=JSON.stringify({p_appareil:RIC.device(),p_nom:String(S&&S.name||'').trim().slice(0,60)||null,p_fil:S&&S.fil||null,p_niv:S&&S.niv||null});
+  const h={apikey:RIC.key,'Content-Type':'application/json'},tk=RIC.session&&RIC.session.access_token;
+  let r=await fetch(RIC.url+'/rest/v1/rpc/je_suis_la_nom',{method:'POST',headers:tk?Object.assign({},h,{Authorization:'Bearer '+tk}):h,body,keepalive:true});
+  if(!r.ok&&tk)await fetch(RIC.url+'/rest/v1/rpc/je_suis_la_nom',{method:'POST',headers:h,body,keepalive:true})}catch(e){}}
+ window.riPresenceNom=ping;
+ setTimeout(()=>ping(true),4000);setInterval(()=>ping(false),90e3);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)ping(false)});
+})();
+
+/* =========================================================
+   LECTURE (tableau de bord) · ?lecture=1 : l'appli sert seulement à lire les questions, aucune statistique envoyée
+   CORRECTIONS DU TABLEAU DE BORD · appliquées sur les questions à l'ouverture et toutes les 10 min (sans nouvelle publication)
+   RÉPONSES CHOISIES · 1re réponse de chaque téléphone à chaque question, envoyée par lots (détection des erreurs de corrigé)
+   ========================================================= */
+(function(){
+ const LECTURE=/[?&]lecture=1\b/.test(location.search);window.__RI_LECTURE=LECTURE;
+ if(LECTURE&&typeof RIC!=='undefined'){RIC.off=()=>true;RIC.track=()=>{}}
+ const CK='ri_corr';let CORR=null,derC=0;
+ const lireC=()=>{try{return JSON.parse(localStorage.getItem(CK)||'null')}catch(e){return null}};
+ function integree(c){try{const I=(E&&E.content&&E.content.corrInt)||{};return I[c.id]&&String(I[c.id])===String(c.t)}catch(e){return false}}
+ function appliquer(){const L=CORR||lireC();if(!Array.isArray(L))return 0;let n=0;
+  L.forEach(c=>{if(!c||!c.qid||!c.c||typeof c.c!=='object'||integree(c))return;const q=QI[c.qid];if(!q)return;
+   Object.keys(c.c).forEach(k=>{if(['id','m'].includes(k))return;const v=c.c[k];if(v===null)delete q[k];else q[k]=v});q.__corr=c.id;n++});return n}
+ window.riCorrections={appliquer,liste:()=>CORR||lireC()||[]};
+ const _ac=applyContent;applyContent=function(){const r=_ac.apply(this,arguments);try{appliquer()}catch(e){}return r};
+ async function charger(force){try{
+  if(typeof RIC==='undefined'||!RIC.url||!RIC.key||!navigator.onLine||(typeof EDITMODE!=='undefined'&&EDITMODE)||(!LECTURE&&RIC.off&&RIC.off()))return;const t=Date.now();if(!force&&t-derC<10*60e3)return;derC=t;
+  const r=await fetch(RIC.url+'/rest/v1/rpc/corrections_actives',{method:'POST',headers:{apikey:RIC.key,'Content-Type':'application/json'},body:'{}'});if(!r.ok)return;
+  const L=await r.json();if(!Array.isArray(L))return;const avant=JSON.stringify(lireC()||[]);CORR=L;try{localStorage.setItem(CK,JSON.stringify(L))}catch(e){}
+  if(JSON.stringify(L)!==avant){try{applyContent();render()}catch(e){}}}catch(e){}}
+ window.riChargerCorrections=charger;
+ try{appliquer()}catch(e){}
+ setTimeout(()=>charger(true),1500);document.addEventListener('visibilitychange',()=>{if(!document.hidden)charger(false)});
+
+ const LT='ABCDEFGH',VK='ri_chv',QK='ri_chq';
+ const lire=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')||d}catch(e){return d}},ecr=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+ function cle(q){if(q.t==='vf')return q.v?'V':'F';if(q.t!=='qcm')return'';const a=Array.isArray(q.am)&&q.am.length?q.am:[q.a];return a.filter(i=>i!=null&&i>=0).map(i=>LT[i]).sort().join('')}
+ function choix(q,x){if(!x)return'';if(q.t==='vf')return x.sel===1||x.sel===true?'V':x.sel===0||x.sel===false?'F':'';if(q.t!=='qcm')return'';
+  if(Array.isArray(x.ms))return x.ms.map(i=>LT[i]).filter(Boolean).sort().join('');return typeof x.sel==='number'&&x.sel>=0?LT[x.sel]||'':''}
+ const _fr=filRep;filRep=function(q,ok,x){try{if(!LECTURE&&q&&q.id&&!(typeof EDITMODE!=='undefined'&&EDITMODE)){const V=lire(VK,{});if(!V[q.id]&&Object.keys(V).length<12000){const c=choix(q,x),k=cle(q);
+   if(c&&k){V[q.id]=1;ecr(VK,V);const L=lire(QK,[]);L.push({q:q.id,c,k});ecr(QK,L.slice(-400));if(L.length>=20)envoyer()}}}}catch(e){}return _fr.apply(this,arguments)};
+ let enC=false;
+ async function envoyer(){try{if(enC||LECTURE||typeof RIC==='undefined'||!RIC.url||!RIC.key||!navigator.onLine||(RIC.off&&RIC.off()))return;const L=lire(QK,[]);if(!L.length)return;enC=true;const lot=L.slice(0,200);
+  const r=await fetch(RIC.url+'/rest/v1/rpc/noter_choix',{method:'POST',headers:{apikey:RIC.key,'Content-Type':'application/json'},body:JSON.stringify({p_lot:lot}),keepalive:true});
+  if(r.ok){const R=lire(QK,[]);ecr(QK,R.slice(lot.length))}}catch(e){}finally{enC=false}}
+ window.riChoix={envoyer,cle,choix};
+ setInterval(envoyer,180e3);document.addEventListener('visibilitychange',()=>{if(document.hidden)envoyer()});
+})();
+
+/* ======================= OFFRES PREMIUM (tableau de bord › Offres) =======================
+   Tout se règle dans le tableau de bord (app_settings « public.access » → offres). Sans réglage, rien ne change.
+   Mode « lancement » : tout est gratuit. Modes « standard », « concours », « perso » : verrous par fonctionnalité
+   (suivi / Mes notes, refaire mes erreurs, examens blancs, calculatrice, explications avec un quota par jour),
+   bouton « Débloquer » au bon moment, essai gratuit unique, formules mises en valeur (prix par jour, prix barré,
+   étiquette, ordre, formule jusqu'au concours), rappel avant la fin, « Faire payer un parent », compte à rebours
+   du concours et promotion limitée (vraie date de fin). Statistiques : debloquer_clic, essai_debut, parent_lien… */
+(function(){if(typeof RIC==='undefined')return;
+ const OF={};RIC.offres=OF;const LS=RIC.LS;
+ const cfg=()=>(RIC.cfg&&RIC.cfg.offres&&typeof RIC.cfg.offres==='object')?RIC.cfg.offres:null;
+ OF.cfg=cfg;
+ OF.mode=()=>{const c=cfg();return c&&['lancement','standard','concours','perso'].includes(c.mode)?c.mode:''};
+ OF.lancement=()=>OF.mode()==='lancement'&&!RIC.off();
+ const actif=()=>!RIC.off()&&['standard','concours','perso'].includes(OF.mode());
+ OF.actif=actif;
+ const F=()=>Object.assign({suivi:'premium',erreurs:'premium',examens:'premium',examens_gratuits:1,calc:'sujet',explications:'quota',expl_jour:2},(cfg()||{}).f||{});
+ const vraiPrem=()=>RIC.isPremium();
+ const fcfa=n=>new Intl.NumberFormat('fr-FR').format(n)+' F';
+ const jour=d=>{try{return new Date(d).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})}catch(e){return''}};
+
+ /* ---------- mode lancement : tout ouvert (comme la semaine gratuite) ---------- */
+ const _can=RIC.can;RIC.can=function(key){const k=String(key||'');if(OF.lancement()&&!/^fonction:(?:admin|studio)/.test(k))return true;
+  if(actif()&&k==='fonction:explications'){const e=F().explications;if(e==='gratuit'||e==='quota')return true;if(e==='premium')return vraiPrem()}
+  return _can.apply(this,arguments)};
+ const _qOk=RIC.qOk;RIC.qOk=function(){if(OF.lancement())return true;return _qOk.apply(this,arguments)};
+
+ /* ---------- promotion limitée (même calcul que le serveur : arrondi à 50 F) ---------- */
+ OF.promo=function(){const c=cfg();const p=c&&c.promo;if(!actif()&&!OF.lancement())return null;if(!p||!p.actif)return null;const t=Date.now(),du=p.du?Date.parse(p.du):0,au=p.au?Date.parse(p.au):0;
+  if(!au||t>=au||(du&&t<du))return null;const pct=Math.max(1,Math.min(90,+p.pct||0));return Object.assign({},p,{pct,au})};
+ const promoSur=(p,id)=>!Array.isArray(p.formules)||!p.formules.length||p.formules.includes(id);
+ OF.prix=function(pl){const base=+pl.__base||+pl.prix_xof||0,p=OF.promo();if(p&&promoSur(p,pl.id))return Math.max(100,Math.round(base*(100-p.pct)/100/50)*50);return base};
+ const FM=id=>(((cfg()||{}).formules)||{})[id]||{};
+ OF.jours=function(pl){const j=FM(pl.id).jusqu;if(j){const n=Math.ceil((Date.parse(j+'T23:59:59')-Date.now())/864e5);if(n>0)return n}return +pl.__jours||+pl.jours||30};
+ OF.plans=function(){const L=(RIC.cfg.plans||[]).slice();L.forEach(p=>{if(p.__base==null){p.__base=p.prix_xof;p.__jours=p.jours}});
+  const o=p=>{const v=FM(p.id).ordre;return v==null||v===''?99:+v};L.sort((a,b)=>o(a)-o(b));return L};
+ /* l'écran de paiement existant affiche le prix promo, la durée réelle et l'ordre choisi */
+ const _payer=RIC.payer;RIC.payer=function(){if(actif()||OF.lancement()){const L=OF.plans();L.forEach(p=>{p.prix_xof=OF.prix(p);p.jours=OF.jours(p)});RIC.cfg.plans.sort((a,b)=>L.indexOf(a)-L.indexOf(b))}return _payer.apply(this,arguments)};
+
+ /* ---------- essai gratuit (une fois, au premier blocage) ---------- */
+ const essaiCfg=()=>Object.assign({actif:false,jours:3},(cfg()||{}).essai||{});
+ OF.essaiPossible=async function(){if(!actif()||!essaiCfg().actif||vraiPrem()||LS.get('ri_essai_fait',0))return false;
+  if(RIC.statut&&RIC.statut.premium_fin)return false;   /* déjà eu un accès : pas d'essai */
+  try{const r=await fetch(RIC.url+'/rest/v1/rpc/essai_possible',{method:'POST',headers:{apikey:RIC.key,Authorization:'Bearer '+RIC.key,'Content-Type':'application/json'},body:JSON.stringify({p_appareil:RIC.device()})});if(!r.ok)return false;return (await r.json())===true}catch(e){return false}};
+ OF.essai=async function(apres){const m=$('#riofE');if(m)m.textContent='Activation…';
+  try{if(!RIC.session)await RIC.anonyme((S&&S.name)||'');const r=await RIC.rpc('essai_demarrer',{p_appareil:RIC.device()});
+   if(!r||!r.ok){LS.set('ri_essai_fait',1);const t={deja:'Tu as déjà utilisé ton essai gratuit.',premium:'Tu as déjà un accès Premium.',ferme:'L’essai gratuit n’est pas disponible pour le moment.'}[r&&r.raison]||'Essai impossible pour le moment, réessaie.';if(m)m.textContent=t;return false}
+   LS.set('ri_essai_fait',1);RIC.track('essai_debut',{jours:r.jours});await RIC.syncCompte();const o=$('#riof');if(o)o.remove();
+   RIC.info('🎁 Essai Premium activé','Tout est ouvert pendant '+r.jours+' jours, jusqu’au '+jour(r.fin)+'. Profites-en !');if(typeof render==='function')render();if(apres)setTimeout(apres,300);return true}
+  catch(e){if(m)m.textContent=/fetch|network|Load failed/i.test(e.message)?'Pas de connexion internet.':'Essai impossible pour le moment, réessaie.';return false}};
+
+ /* ---------- « Faire payer un parent » ---------- */
+ OF.parent=function(pl){const c=RIC.cfg.paiement||{},prix=OF.prix(pl),nom=(S&&S.name)||'',num=((c.numeros||{}).wave||(c.numeros||{}).orange||(c.numeros||{}).mtn||(c.numeros||{}).moov||'');
+  const lien=(c.wave_lien||'https://pay.wave.com/m/M_ci_kAcBVdk53ehz/c/ci/')+'?amount='+prix;
+  const txt=`Bonjour, peux-tu m’aider à payer mon accès Premium Révision INFAS pour bien préparer le concours ?\n\n${pl.nom} : ${fcfa(prix)} (${OF.jours(pl)} jours).\n\nPaiement Wave : ${lien}${num?`\nOu par Mobile Money au ${num}${c.nom?' ('+c.nom+')':''}`:''}\n\nDis-moi quand c’est fait et quel numéro a payé, je l’indiquerai dans l’appli.${nom?'\n\n'+nom:''} Merci !`;
+  RIC.track('parent_lien',{plan:pl.id});window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank')};
+
+ /* ---------- écran « Débloquer » ---------- */
+ const QUOI={explication:'les explications',erreur:'les explications',calculatrice:'la calculatrice',notes:'le suivi et Mes notes',erreurs:'« Refaire mes erreurs »',examen:'les examens blancs',fin_examen:'tout Premium',contenu:'ce contenu',rappel:'ton Premium'};
+ let attente=null;   /* action à reprendre dès que le Premium est actif (ex. ouvrir la calculatrice sans arrêter le chrono) */
+ OF.debloquer=async function(endroit,titre,apres){RIC.track('debloquer_clic',{endroit});attente=apres?{f:apres,t:Date.now()}:null;
+  if(await OF.essaiPossible()){essaiModal(endroit,titre,apres);return}offreModal(endroit,titre)};
+ function essaiModal(endroit,titre,apres){let o=$('#riof');if(o)o.remove();o=document.createElement('div');o.id='riof';o.className='pmod';const j=Math.max(1,Math.min(14,+essaiCfg().jours||3));
+  o.innerHTML=`<div class="pbox"><h3>🎁 Essaie Premium gratuitement ${j} jours</h3><div class="muted small">${esc(titre||'Débloque '+(QUOI[endroit]||'tout Premium'))} : pendant ${j} jours, tout est ouvert (explications, calculatrice, examens blancs, suivi, refaire mes erreurs). Sans payer, sans engagement : une seule fois par élève.</div>
+   <button class="btn coral" style="width:100%;margin-top:12px" id="riofEo">Commencer mon essai gratuit</button><div id="riofE" class="small" style="margin-top:6px;color:#c0392b"></div>
+   <button class="btn light" style="width:100%;margin-top:8px" id="riofVo">Voir les formules</button><button class="btn light" style="width:100%;margin-top:8px" id="riofX">Plus tard</button></div>`;
+  document.body.appendChild(o);$('#riofX',o).onclick=()=>o.remove();o.onclick=e=>{if(e.target===o)o.remove()};$('#riofVo',o).onclick=()=>offreModal(endroit,titre);
+  $('#riofEo',o).onclick=async()=>{$('#riofEo',o).disabled=true;if(!(await OF.essai(apres)))$('#riofEo',o).disabled=false}}
+ function reste(au){const s=Math.max(0,au-Date.now()),j=Math.floor(s/864e5),h=Math.floor(s%864e5/36e5),m=Math.floor(s%36e5/6e4);return j?j+' j '+h+' h':h?h+' h '+m+' min':m+' min'}
+ function offreModal(endroit,titre){let o=$('#riof');if(o)o.remove();o=document.createElement('div');o.id='riof';o.className='pmod';document.body.appendChild(o);
+  const c=cfg()||{},L=OF.plans(),pr=OF.promo(),payOk=RIC.payOuvert(),par=(c.parent||{}).actif!==false&&payOk,admin=((E.content&&E.content.commu)||{}).admin;
+  let sel=(L.find(p=>FM(p.id).etiquette)||L[0]||{}).id;
+  const draw=()=>{const D=(c.debloquer||{}).texte;
+   o.innerHTML=`<div class="pbox"><h3>⭐ ${esc(titre||'Débloque '+(QUOI[endroit]||'tout Premium'))}</h3>
+    <div class="muted small">${esc(D||'Premium ouvre tous les sujets, les explications complètes, la calculatrice, les examens blancs illimités, ton suivi et « Refaire mes erreurs ».')}</div>
+    ${pr?`<div class="riof-promo">🔥 <b>-${pr.pct} %</b>${pr.titre?' · '+esc(pr.titre):''} · jusqu’au ${esc(jour(pr.au))} <span id="riofR">(encore ${reste(pr.au)})</span></div>`:''}
+    <div style="margin:10px 0">${L.map(p=>{const m=FM(p.id),px=OF.prix(p),j=OF.jours(p),base=+p.__base,barre=px<base?base:(+m.barre>px?+m.barre:0);
+      return `<div class="li ri-opt riof-f ${p.id===sel?'on':''}" data-of="${esc(p.id)}"><span class="em">${p.id===sel?'🔘':'⚪'}</span><span class="tx"><b>${esc(p.nom)}${m.etiquette?` <span class="riof-tag">${esc(m.etiquette)}</span>`:''}</b>
+       <small>${m.jusqu?'Jusqu’au concours ('+esc(jour(m.jusqu+'T12:00:00'))+')':j+' jours'} · soit ${fcfa(Math.max(1,Math.round(px/Math.max(1,j))))} par jour</small></span>
+       <span style="text-align:right;white-space:nowrap">${barre?`<s class="muted small">${fcfa(barre)}</s><br>`:''}<b>${fcfa(px)}</b></span></div>`}).join('')}</div>
+    ${payOk&&L.length?`<button class="btn coral" style="width:100%" id="riofP">💳 Payer ${(()=>{const p=L.find(x=>x.id===sel);return p?fcfa(OF.prix(p)):''})()}</button>`:`<div class="muted small">Pour obtenir ton accès, écris à l’administrateur.</div>`}
+    <div id="riofE" class="small" style="margin-top:6px;color:#c0392b"></div>
+    ${par?`<button class="btn light" style="width:100%;margin-top:8px" id="riofPa">👪 Faire payer un parent (WhatsApp)</button>`:''}
+    <button class="btn light" style="width:100%;margin-top:8px" id="riofC">🎟️ J’ai un code d’activation</button>
+    <div class="row2" style="margin-top:8px">${admin&&linkOk(admin)?`<a class="btn light" href="${esc(admin)}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">✉️ Administrateur</a>`:''}<button class="btn light" id="riofX">Plus tard</button></div></div>`;
+   $$('[data-of]',o).forEach(e=>e.onclick=()=>{sel=e.dataset.of;draw()});$('#riofX',o).onclick=()=>o.remove();
+   $('#riofC',o).onclick=()=>{o.remove();RIC.code(sel)};
+   if($('#riofPa',o))$('#riofPa',o).onclick=()=>{const p=L.find(x=>x.id===sel);if(p)OF.parent(p)};
+   if($('#riofP',o))$('#riofP',o).onclick=async()=>{const b=$('#riofP',o);b.disabled=true;
+    try{if(!RIC.session)await RIC.anonyme((S&&S.name)||'')}catch(e){$('#riofE',o).textContent=/fetch|network|Load failed/i.test(e.message)?'Pas de connexion internet.':'Réessaie dans un instant.';b.disabled=false;return}
+    o.remove();RIC.__nouvelOnglet=!!(typeof FILS!=='undefined'&&FILS&&!FILS.fin&&VIEW==='fil');try{RIC.payer(sel)}finally{setTimeout(()=>{RIC.__nouvelOnglet=false},60e3)}}};
+  draw();o.onclick=e=>{if(e.target===o)o.remove()};
+  if(pr){const it=setInterval(()=>{const r=$('#riofR',o);if(!document.body.contains(o)){clearInterval(it);return}if(r)r.textContent='(encore '+reste(pr.au)+')'},3e4)}}
+ OF.offre=offreModal;
+ /* l'ancien écran « contenu Premium » passe par le nouvel écran quand les offres sont réglées */
+ const _pw=RIC.paywall;RIC.paywall=function(key,what){if(actif())return OF.debloquer('contenu',what);return _pw.apply(this,arguments)};
+ /* reprise de l'action en attente dès que le Premium est actif (paiement, code ou essai) */
+ let nSync=0;setInterval(()=>{if(!attente)return;if(Date.now()-attente.t>45*60e3){attente=null;return}
+  if(vraiPrem()){const f=attente.f;attente=null;try{f()}catch(e){}return}if(++nSync%3===0&&RIC.session&&RIC.syncCompte)RIC.syncCompte()},5e3);
+
+ /* ---------- verrous ---------- */
+ const libre=k=>!actif()||vraiPrem()||F()[k]==='gratuit';
+ OF.libre=libre;
+ if(typeof startFil==='function'){const _sf=startFil;startFil=function(mid,ids,label,mode,k,o){
+  if(mode==='diff'&&!libre('erreurs')){OF.debloquer('erreurs','Refaire mes erreurs · Premium');return}
+  if(o&&o.min&&mode!=='compo'&&!libre('examens')&&((S.exams||[]).length>=Math.max(0,+F().examens_gratuits||0))){OF.debloquer('examen','Examens blancs illimités · Premium');return}
+  return _sf.apply(this,arguments)}}
+ if(typeof startDiff==='function'){const _sd=startDiff;startDiff=function(){if(!libre('erreurs')){OF.debloquer('erreurs','Refaire mes erreurs · Premium');return}return _sd.apply(this,arguments)}}
+ const flou=(t,endroit,titre)=>`<div class="card sf riof-lock"><div class="riof-flou" aria-hidden="true">${'<div class="sbar"><span class="nmx">Sujet · 12/20</span><span class="tr"><i style="width:60%"></i></span></div>'.repeat(4)}</div>
+   <div class="riof-sur"><b>🔒 ${esc(t)}</b><button class="btn coral" onclick="RIC.offres.debloquer('${endroit}','${jsq(titre)}')">⭐ Débloquer</button></div></div>`;
+ ['notes.main','stats.notes'].forEach(id=>{const b=BLK[id];if(!b)return;const h=b.html;b.html=function(){if(!libre('suivi'))return flou('Ton suivi et tes notes sont réservés à Premium','notes','Mes notes et mon suivi · Premium');return h.apply(this,arguments)}});
+ /* calculatrice : « sujet » = gratuite dans un sujet gratuit, Premium dans un sujet Premium */
+ window.RI_CALC_GUARD=function(){if(!actif()||vraiPrem())return true;const m=F().calc;if(m==='gratuit')return true;let ok=m!=='premium';
+  if(m==='sujet'){let mid='',k=null;if(VIEW==='fil'&&typeof FILS!=='undefined'&&FILS){mid=FILS.mid;k=FILS.k}else if(typeof EX!=='undefined'&&EX&&VIEW==='exam'){mid=EX.mid;k=EX.k}
+   ok=!mid||(k!=null?RIC.can('matiere:'+mid+'/sujet:'+(k+1)):RIC.effective('matiere:'+mid)==='gratuit')}
+  if(ok)return true;RIC.track('calc_bloquee',{});OF.debloquer('calculatrice','Calculatrice · Premium',()=>{if(window.__calcOuvrir)window.__calcOuvrir();toast('🧮 Calculatrice débloquée : ton chrono continue')});return false};
+
+ /* ---------- explications : quota par jour, puis aperçu flouté ---------- */
+ const FAUX='La bonne réponse s’explique par le mécanisme décrit dans le cours : on retient la notion clé, le piège classique et la règle à appliquer le jour du concours.';
+ function quota(){const e=F().explications;if(!actif()||vraiPrem()||e!=='quota')return null;return Math.max(0,+F().expl_jour||0)}
+ function explications(){if(VIEW!=='fil'||typeof FILS==='undefined'||!FILS)return;const q=quota();if(q==null)return;const app=$('#app');if(!app)return;
+  let L=LS.get('ri_of_expl',null);if(!L||L.d!==today())L={d:today(),ids:[]};let ch=false;
+  $$('.filq',app).forEach(card=>{if(!$('.fb',card))return;const qid=card.id.replace(/^fq-/,'');const X=$$('.ex,.xbox',card).filter(x=>!x.classList.contains('ri-lockx'));if(!X.length)return;
+   if(L.ids.includes(qid))return;if(L.ids.length<q){L.ids.push(qid);ch=true;return}
+   const a=FILS.ans&&FILS.ans[qid],end=a&&a.ok===false?'erreur':'explication';
+   X.forEach(x=>{x.classList.add('ri-lockx');x.innerHTML=`<div class="riof-flou" aria-hidden="true">${FAUX}</div><div class="riof-sur"><b>🔒 ${q?'Tes '+q+' explications gratuites du jour sont utilisées.':'Explication réservée à Premium.'}</b><button class="btn coral" onclick="RIC.offres.debloquer('${end}','Toutes les explications · Premium')">⭐ Débloquer</button></div>`})});
+  if(ch)LS.set('ri_of_expl',L)}
+ /* fin d'un examen blanc : proposer Premium au moment où l'élève voit sa note */
+ function finExamen(){if(!actif()||vraiPrem()||VIEW!=='fil'||typeof FILS==='undefined'||!FILS||!FILS.fin||!FILS.end)return;const m=$('#main');if(!m||$('.riof-fin',m))return;
+  const d=document.createElement('div');d.className='card sf riof-fin';d.innerHTML=`<b>🎯 Continue sur ta lancée</b><div class="muted small" style="margin:4px 0 8px">Avec Premium : examens blancs illimités, toutes les explications, « Refaire mes erreurs » et ton suivi.</div><button class="btn coral" style="width:100%" onclick="RIC.offres.debloquer('fin_examen','Passe Premium')">⭐ Débloquer</button>`;m.appendChild(d)}
+ const go1=()=>{try{explications();finExamen()}catch(e){console.warn('RI offres',e)}};let tA=0;
+ const apres=()=>{go1();clearTimeout(tA);tA=setTimeout(go1,60);setTimeout(go1,350)};   /* l'écran peut se dessiner juste après : on repasse */
+ if(typeof render==='function'){const _r=render;render=function(){const r=_r.apply(this,arguments);apres();return r}}
+ if(typeof filMaj==='function'){const _f=filMaj;filMaj=function(){const r=_f.apply(this,arguments);apres();return r}}
+
+ /* ---------- accueil : rappel avant la fin du Premium et compte à rebours du concours ---------- */
+ B('home.offres','Offres : rappel et compte à rebours (accueil)',()=>{if(RIC.off()||!(actif()||OF.lancement()))return'';const c=cfg()||{};let h='';
+  const r=Object.assign({actif:false,jours:3},c.rappel||{}),st=RIC.statut||{};
+  if(r.actif&&st.premium_fin&&RIC.session){const n=Math.ceil((Date.parse(st.premium_fin)-Date.now())/864e5);if(n>=0&&n<=Math.max(1,+r.jours||3)){
+   if(LS.get('ri_rappel_vu','')!==today()){LS.set('ri_rappel_vu',today());RIC.track('rappel_vu',{jours:n})}
+   h+=`<div class="card sf riof-rap"><b>⏳ Ton Premium se termine ${n<=0?'aujourd’hui':n===1?'demain':'dans '+n+' jours'}</b><div class="muted small" style="margin:4px 0 8px">Renouvelle maintenant : la nouvelle durée s’ajoute à la fin de ton accès, tu ne perds aucun jour.</div><button class="btn coral" style="width:100%" onclick="RIC.track('debloquer_clic',{endroit:'rappel'});RIC.payer()">🔄 Renouveler mon Premium</button></div>`}}
+  const k=Object.assign({actif:false,date:'',seuil:60,texte:''},c.concours||{});
+  if(k.actif&&k.date&&(OF.mode()==='concours'||OF.mode()==='perso'||OF.mode()==='lancement')){const n=Math.round((Date.parse(k.date+'T00:00:00')-Date.parse(today()+'T00:00:00'))/864e5);
+   if(n>=0&&(!+k.seuil||n<=+k.seuil))h+=`<div class="card sf riof-cc"><div class="riof-j">${n===0?'Jour J':'J-'+n}</div><div><b>${esc(k.texte||'avant le concours')}</b><div class="small" style="opacity:.9">Concours le ${esc(jour(k.date+'T12:00:00'))}${!vraiPrem()&&actif()?' · chaque jour compte':''}</div></div></div>`}
+  return h});
+ const H=SCREENS.home&&SCREENS.home.blocks;if(H&&!H.includes('home.offres'))H.splice(Math.min(1,H.length),0,'home.offres');
+ const _lo=layoutOf;layoutOf=function(sc){const L=_lo.apply(this,arguments);if(sc!=='home'||!Array.isArray(L)||L.some(b=>b.id==='home.offres'))return L;const C=L.slice();C.splice(Math.min(1,C.length),0,{id:'home.offres',inst:'home.offres'});return C};
+
+ const st=document.createElement('style');st.textContent=`.riof-tag{display:inline-block;background:#f59e0b;color:#fff;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:800;vertical-align:middle}
+ .riof-promo{margin:10px 0 0;padding:8px 10px;border-radius:10px;background:#fff1e6;color:#9a3412;font-size:14px}
+ .riof-lock,.ri-lockx{position:relative}.riof-flou{filter:blur(5px);user-select:none;pointer-events:none;opacity:.8}
+ .riof-sur{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:10px 6px}.riof-lock .riof-sur{position:absolute;inset:0;justify-content:center;background:rgba(255,255,255,.55)}
+ .riof-cc{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#6C3BF5,#2563eb);color:#fff;border:0}.riof-j{font-size:26px;font-weight:900;white-space:nowrap}
+ .riof-rap{border:2px solid #f59e0b}`;document.head.appendChild(st);
+})();
+
+/* ======================= SUJETS PAR GROUPES (cours ajouté avec mat.groupesSujets = [{t:'Partie 1', k:[0]}, …]) =======================
+   Annales de médecine : un en-tête par partie de l'annale au-dessus de ses sujets, dans l'ordre du fichier
+   (page du cours et rubrique d'accueil « DOCUMENT DE REVISION INFAS »). Sans ce champ, rien ne change. */
+(function(){if(typeof sujListeHTML!=='function')return;const _sl=sujListeHTML;
+ sujListeHTML=function(m){const h=_sl.apply(this,arguments);const G=m&&MATI[m.id]&&MATI[m.id].groupesSujets;if(!Array.isArray(G)||!G.length)return h;
+  const rows=h.split(/(?=<div class="suj sf)/);if(!rows.length||!/^<div class="suj sf/.test(rows[0]))return h;const avant={};G.forEach(g=>{const k=Math.min(...(g.k||[]));if(isFinite(k))avant[k]=g.t});
+  return rows.map((r,k)=>(avant[k]?`<div class="rc-sub ri-gsuj"${k?' style="margin-top:12px"':''}>📘 ${esc(avant[k])}</div>`:'')+r).join('')}})();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

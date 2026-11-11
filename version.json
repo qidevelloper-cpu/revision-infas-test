@@ -1,10 +1,18 @@
 {
- "v": "0c1906933d",
+ "v": "0b8b9a314e",
  "date": "2026-10-25",
- "sig": "d15faf922158a8996a00f8edab0436c5bde279dc",
+ "sig": "0960328435e7d101e65909272736cb9eff78fefd",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
+  },
+  {
+   "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
+   "m": "xmvkq4zed"
+  },
+  {
+   "t": "📘 Nouveau cours : Médecine — Annales corrigées L3 IDE",
+   "m": "xmedann"
   }
  ],
  "mats": {
@@ -41,8 +49,8 @@
    "h": "cc58c4abda2f9150c902b0bf78c71b6cee39ef42"
   },
   "xmvkq4zed": {
-   "t": "Correction Nationale 2025 — Examens blancs infirmier",
-   "h": "0c6615fcd06390c582f3e6eae3b848d886498bfc"
+   "t": "CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
+   "h": "3baa9742081ad395f15ae3de4cb44de7012e008d"
   },
   "xmvkq53re": {
    "t": "Pharmacologie",
@@ -53,7 +61,7 @@
    "h": "9129f94eecfc57e5beef373cca0332fefb8272f4"
   },
   "xmvkq5cba": {
-   "t": "Santé infantile",
+   "t": "SANTE INFANTILE",
    "h": "5417f6d4e43f6a00733fadaa2701eab07b0da154"
   },
   "xmvkq5gqn": {
@@ -96,6 +104,10 @@
    "t": "Ophtalmologie",
    "h": "864477f569d744990ba9ccbbd3a43fd64a031847"
   },
+  "xmedann": {
+   "t": "Médecine — Annales corrigées L3 IDE",
+   "h": "da1668a3cde14d3203d0ee651fa460c299e649de"
+  },
   "xpedexo": {
    "t": "Pédiatrie — Exercices & Corrigés",
    "h": "405e714fab0a2c0dfb3775e8fdb55a16410948f6"
@@ -107,7 +119,24 @@
  },
  "hist": [
   {
-   "v": "0c1906933d",
+   "v": "0b8b9a314e",
+   "date": "2026-10-25",
+   "notes": [
+    {
+     "t": "Nouvelle mise à jour"
+    },
+    {
+     "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
+     "m": "xmvkq4zed"
+    },
+    {
+     "t": "📘 Nouveau cours : Médecine — Annales corrigées L3 IDE",
+     "m": "xmedann"
+    }
+   ]
+  },
+  {
+   "v": "73531e6db8",
    "date": "2026-10-25",
    "notes": [
     {
@@ -212,15 +241,6 @@
    "notes": [
     {
      "t": "Nouvelle calculatrice : modèle de poche (AC, %, ×, ÷, +/-, = orange)"
-    }
-   ]
-  },
-  {
-   "v": "995dc89b2b",
-   "date": "2026-10-25",
-   "notes": [
-    {
-     "t": "Codes d'activation, sujets Prépa D.E (ordre ou aléatoire), reprise d'un sujet, questions gratuites, images dans les cours, nouvelle calculatrice"
     }
    ]
   }
