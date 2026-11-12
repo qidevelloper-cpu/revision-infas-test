@@ -2255,11 +2255,11 @@ const RIC={
     get('announcements?select=id,titre,texte,cible,couleur,du,au')]);
    const regles={};rules.forEach(r=>{regles[r.cle]=r.quota_gratuit==null?{acces:r.acces}:{acces:r.acces,quotaGratuit:r.quota_gratuit}});
    const sv=k=>{const x=sets.find(r=>r.cle===k);return(x&&x.valeur)||{}};const pa=sv('public.access'),pay=sv('public.paiement');
-   const old=JSON.stringify(RIC.cfg.regles)+RIC.cfg.defaut+JSON.stringify(RIC.cfg.annonces)+JSON.stringify(RIC.cfg.questions||{})+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null);
+   const old=JSON.stringify(RIC.cfg.regles)+RIC.cfg.defaut+JSON.stringify(RIC.cfg.annonces)+JSON.stringify(RIC.cfg.questions||{})+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null)+JSON.stringify(RIC.cfg.contact||null);
    let google=false;try{const r=await fetch(RIC.url+'/auth/v1/settings',{headers:H(),cache:'no-store'});if(r.ok){const j=await r.json();google=!!(j.external&&j.external.google)}}catch(e){}
-   RIC.cfg={regles,defaut:pa.defaut==='premium'?'premium':'gratuit',version:pa.version||0,questions:(pa.questions&&typeof pa.questions==='object')?pa.questions:{},plusapp:(pa.plusapp&&typeof pa.plusapp==='object')?pa.plusapp:{},plans,annonces:ann,google,paiement:pay,promo:(pa.promo&&typeof pa.promo==='object')?pa.promo:null,fincorr:(pa.fincorr&&typeof pa.fincorr==='object')?pa.fincorr:{},nosig:(pa.nosig&&typeof pa.nosig==='object')?pa.nosig:{},offres:(pa.offres&&typeof pa.offres==='object')?pa.offres:null,t:Date.now()};
+   RIC.cfg={regles,defaut:pa.defaut==='premium'?'premium':'gratuit',version:pa.version||0,questions:(pa.questions&&typeof pa.questions==='object')?pa.questions:{},plusapp:(pa.plusapp&&typeof pa.plusapp==='object')?pa.plusapp:{},plans,annonces:ann,google,paiement:pay,promo:(pa.promo&&typeof pa.promo==='object')?pa.promo:null,fincorr:(pa.fincorr&&typeof pa.fincorr==='object')?pa.fincorr:{},nosig:(pa.nosig&&typeof pa.nosig==='object')?pa.nosig:{},offres:(pa.offres&&typeof pa.offres==='object')?pa.offres:null,contact:(pa.contact&&typeof pa.contact==='object')?pa.contact:null,t:Date.now()};
    LS.set(RIC.CK,RIC.cfg);RIC.ready=true;
-   if(old!==JSON.stringify(regles)+RIC.cfg.defaut+JSON.stringify(ann)+JSON.stringify(RIC.cfg.questions)+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null)&&typeof render==='function'&&!EDITMODE&&!quiet)render();
+   if(old!==JSON.stringify(regles)+RIC.cfg.defaut+JSON.stringify(ann)+JSON.stringify(RIC.cfg.questions)+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null)+JSON.stringify(RIC.cfg.contact||null)&&typeof render==='function'&&!EDITMODE&&!quiet)render();
   }catch(e){console.warn('RI cloud : règles non mises à jour',e)}
   RIC.busy=false;flush()}
  RIC.refresh=refresh;
@@ -3287,7 +3287,7 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  const _prem=RIC.isPremium;RIC.isPremium=function(){if(RIC.promo())return true;return _prem.apply(this,arguments)};
  const fmt=d=>{try{return new Date(d).toLocaleString('fr-FR',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}catch(e){return''}};
  B('home.promo','Semaine gratuite (accueil)',()=>{const p=RIC.promo();if(!p)return'';return `<div class="card sf" style="background:linear-gradient(135deg,#16a34a,#0d9488);color:#fff;border:0"><div style="font-size:18px;font-weight:800">${esc(p.titre||Tx('promo.t','🎁 Semaine gratuite'))}</div>
-   <div style="margin-top:4px;opacity:.95">${T('promo.s','Tous les sujets, toutes les questions, les réponses et les corrections sont gratuits jusqu’au {d}. Profites-en !',{d:esc(fmt(p.au))})}</div></div>`});
+   <div style="margin-top:4px;opacity:.95;white-space:pre-line;overflow-wrap:anywhere">${p.texte?esc(String(p.texte).slice(0,1500)).replace(/\{date\}/g,esc(fmt(p.au))):T('promo.s','Tous les sujets, toutes les questions, les réponses et les corrections sont gratuits jusqu’au {d}. Profites-en !',{d:esc(fmt(p.au))})}</div></div>`});
  const H=SCREENS.home&&SCREENS.home.blocks;if(H&&!H.includes('home.promo')){H.splice(Math.min(1,H.length),0,'home.promo')}
  const _lo=layoutOf;layoutOf=function(sc){const L=_lo.apply(this,arguments);if(sc!=='home'||!Array.isArray(L)||L.some(b=>b.id==='home.promo'))return L;const C=L.slice();C.splice(Math.min(1,C.length),0,{id:'home.promo',inst:'home.promo'});return C};
  setInterval(()=>{const on=!!RIC.promo();if(on!==RIC.__promo){RIC.__promo=on;if(typeof render==='function'&&!EDITMODE)render()}},6e4);RIC.__promo=!!RIC.promo();
@@ -3740,4 +3740,17 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  const _x=extrasHTML;extrasHTML=function(q){const h=_x.apply(this,arguments);const U=q&&Array.isArray(q.xi)?q.xi.filter(riXiOk):[];if(!U.length)return h;
   const f=U.map(u=>`<figure class="xfig ri-xi"><img loading="lazy" decoding="async" src="${esc(u)}" alt="${esc(Tx('x.img','Image de l’explication'))}" loading="lazy" onclick="riZoomXi('${jsq(u)}')"><figcaption>🖼️ ${esc(Tx('x.img','Image de l’explication'))}</figcaption></figure>`).join('');
   return h?h.replace('<div class="xbox">','<div class="xbox">'+f):`<div class="xbox">${f}</div>`}})();
+/* ======================= CONTACTER L'ADMINISTRATEUR (accueil, réglé au tableau de bord › Annonces) =======================
+   Carte en haut de l'accueil : chaque bouton ouvre WhatsApp avec un message prêt (et le nom de l'élève si demandé). */
+(function(){if(typeof RIC==='undefined')return;
+ const C=()=>{const c=RIC.cfg&&RIC.cfg.contact;if(!c||!c.actif)return null;let n=String(c.numero||'').replace(/\D/g,'');if(n.length===10)n='225'+n;if(!/^\d{8,15}$/.test(n))return null;
+  const M=(Array.isArray(c.messages)?c.messages:[]).slice(0,3).filter(x=>x&&x.b&&x.m);return M.length?{c,n,M}:null};
+ window.riContact=function(i){const k=C();if(!k||!k.M[i])return;let m=String(k.M[i].m);const nom=(typeof S!=='undefined'&&S&&S.name)?String(S.name).trim():'';if(k.c.nom!==false&&nom)m+='\n— '+nom;
+  try{if(RIC.track)RIC.track('contact_whatsapp',{i})}catch(e){}window.open('https://wa.me/'+k.n+'?text='+encodeURIComponent(m),'_blank','noopener')};
+ B('home.contact','Contacter l’administrateur (accueil)',()=>{const k=C();if(!k)return'';const c=k.c;
+  return `<div class="card sf ri-contact" style="border:2px solid #25d366"><div style="font-size:17px;font-weight:800">${esc(c.titre||'📞 Contacter l’administrateur')}</div>${c.texte?`<div class="muted" style="margin:4px 0 8px;white-space:pre-line;overflow-wrap:anywhere">${esc(c.texte)}</div>`:''}
+   ${k.M.map((x,i)=>`<button class="btn" style="display:block;width:100%;margin:6px 0 0;text-align:left;background:#25d366;color:#fff;border:0;font-weight:700" onclick="riContact(${i})">${esc(x.b)}</button>`).join('')}</div>`});
+ const H=SCREENS.home&&SCREENS.home.blocks;if(H&&!H.includes('home.contact'))H.splice(Math.min(1,H.length),0,'home.contact');
+ const _lo=layoutOf;layoutOf=function(sc){const L=_lo.apply(this,arguments);if(sc!=='home'||!Array.isArray(L)||L.some(b=>b.id==='home.contact'))return L;const X=L.slice();X.splice(Math.min(1,X.length),0,{id:'home.contact',inst:'home.contact'});return X};
+})();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

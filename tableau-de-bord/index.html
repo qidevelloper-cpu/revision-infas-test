@@ -629,7 +629,7 @@ const MAP = [
 const VIRTUAL = [
   {t:'access_rules', id:'cle', rows:db=>Object.entries(db.access.regles).map(([cle,v])=>({cle, acces:v.acces, quota_gratuit:v.quotaGratuit==null?null:v.quotaGratuit}))},
   {t:'app_settings', id:'cle', noDelete:true, rows:db=>[
-    {cle:'public.access', valeur:Object.assign({defaut:db.access.defaut, version:db.access.version, misAJour:db.access.misAJour, questions:db.access.questions||{}, plusapp:db.access.plusapp||{}}, db.access.promo?{promo:db.access.promo}:{}, db.access.fincorr&&Object.keys(db.access.fincorr).length?{fincorr:db.access.fincorr}:{}, db.access.nosig&&Object.keys(db.access.nosig).length?{nosig:db.access.nosig}:{}, db.access.offres&&typeof db.access.offres==='object'?{offres:db.access.offres}:{})},
+    {cle:'public.access', valeur:Object.assign({defaut:db.access.defaut, version:db.access.version, misAJour:db.access.misAJour, questions:db.access.questions||{}, plusapp:db.access.plusapp||{}}, db.access.promo?{promo:db.access.promo}:{}, db.access.fincorr&&Object.keys(db.access.fincorr).length?{fincorr:db.access.fincorr}:{}, db.access.nosig&&Object.keys(db.access.nosig).length?{nosig:db.access.nosig}:{}, db.access.offres&&typeof db.access.offres==='object'?{offres:db.access.offres}:{}, db.access.contact&&typeof db.access.contact==='object'?{contact:db.access.contact}:{})},
     {cle:'goals', valeur:db.goals},
     {cle:'demo_stats', valeur:db.stats},
     {cle:'meta', valeur:{demo:!!db.meta.demo}},
@@ -674,7 +674,7 @@ const SupabaseSource = {
     const rawRules = await fetchAll('access_rules'), rawSettings = await fetchAll('app_settings');
     rawRules.forEach(r=>{ db.access.regles[r.cle] = r.quota_gratuit==null ? {acces:r.acces} : {acces:r.acces, quotaGratuit:r.quota_gratuit}; });
     rawSettings.forEach(r=>{
-      if(r.cle==='public.access'){ if(r.valeur.promo && typeof r.valeur.promo==='object') db.access.promo = r.valeur.promo; db.access.fincorr = (r.valeur.fincorr && typeof r.valeur.fincorr==='object') ? r.valeur.fincorr : {}; db.access.nosig = (r.valeur.nosig && typeof r.valeur.nosig==='object') ? r.valeur.nosig : {}; db.access.offres = (r.valeur.offres && typeof r.valeur.offres==='object') ? r.valeur.offres : null; db.access.defaut = r.valeur.defaut||'gratuit'; db.access.version = r.valeur.version||1; db.access.misAJour = r.valeur.misAJour||db.access.misAJour; db.access.questions = (r.valeur.questions&&typeof r.valeur.questions==='object')?r.valeur.questions:{}; db.access.plusapp = (r.valeur.plusapp&&typeof r.valeur.plusapp==='object')?r.valeur.plusapp:{}; }
+      if(r.cle==='public.access'){ if(r.valeur.promo && typeof r.valeur.promo==='object') db.access.promo = r.valeur.promo; db.access.fincorr = (r.valeur.fincorr && typeof r.valeur.fincorr==='object') ? r.valeur.fincorr : {}; db.access.nosig = (r.valeur.nosig && typeof r.valeur.nosig==='object') ? r.valeur.nosig : {}; db.access.offres = (r.valeur.offres && typeof r.valeur.offres==='object') ? r.valeur.offres : null; db.access.contact = (r.valeur.contact && typeof r.valeur.contact==='object') ? r.valeur.contact : null; db.access.defaut = r.valeur.defaut||'gratuit'; db.access.version = r.valeur.version||1; db.access.misAJour = r.valeur.misAJour||db.access.misAJour; db.access.questions = (r.valeur.questions&&typeof r.valeur.questions==='object')?r.valeur.questions:{}; db.access.plusapp = (r.valeur.plusapp&&typeof r.valeur.plusapp==='object')?r.valeur.plusapp:{}; }
       if(r.cle==='goals' && Array.isArray(r.valeur)) db.goals = r.valeur;
       if(r.cle==='demo_stats' && r.valeur && r.valeur.daily) db.stats = r.valeur;
       if(r.cle==='meta' && r.valeur) db.meta.demo = !!r.valeur.demo;
@@ -1787,15 +1787,19 @@ function promoCard(){
       <label class="row" style="gap:8px;align-items:center;flex:0 0 auto"><input type="checkbox" id="prOn" ${p.actif?'checked':''} style="width:22px;height:22px"> <b>Activer</b></label>
       <div><label class="lbl" for="prDu">Du</label><input class="field" id="prDu" type="datetime-local" value="${esc(dtLocal(p.du||new Date()))}"></div>
       <div><label class="lbl" for="prAu">Au</label><input class="field" id="prAu" type="datetime-local" value="${esc(dtLocal(p.au||new Date(Date.now()+7*DAY)))}"></div>
-      <div style="flex:1 1 220px"><label class="lbl" for="prT">Titre du bandeau</label><input class="field" id="prT" maxlength="80" value="${esc(p.titre||'🎁 Semaine gratuite')}"></div>
+      <div style="flex:1 1 220px"><label class="lbl" for="prT">Titre du bandeau</label><input class="field" id="prT" maxlength="150" value="${esc(p.titre||'🎁 Semaine gratuite')}"></div>
     </div>
+    <label class="lbl" for="prX" style="margin-top:10px">Message du bandeau <span class="muted small">(jusqu’à 1 500 caractères ; vide = message habituel ; {date} = date de fin)</span></label>
+    <textarea class="field" id="prX" rows="5" maxlength="1500" placeholder="Tous les sujets, toutes les questions, les réponses et les corrections sont gratuits jusqu’au {date}. Profites-en !">${esc(p.texte||'')}</textarea>
+    <div class="muted small" id="prXn" style="text-align:right">${(p.texte||'').length} / 1 500</div>
     <div style="margin-top:12px"><button class="btn pri" id="prGo">Enregistrer</button> <span class="muted small">Les élèves le voient à la prochaine ouverture de l’appli (au plus 5 minutes).</span></div></div>`;
 }
 function bindPromo(){
   if(!$('#prGo')) return;
+  if($('#prX')) $('#prX').oninput = ()=>{ $('#prXn').textContent = $('#prX').value.length+' / 1 500'; };
   $('#prGo').onclick=()=>{ const du=new Date($('#prDu').value), au=new Date($('#prAu').value), on=$('#prOn').checked;
     if(on && !(au>du)){ toast('La date de fin doit être après la date de début.'); return; }
-    DB.access.promo = {actif:on, du:isNaN(du)?null:du.toISOString(), au:isNaN(au)?null:au.toISOString(), titre:($('#prT').value||'').trim().slice(0,80)};
+    DB.access.promo = {actif:on, du:isNaN(du)?null:du.toISOString(), au:isNaN(au)?null:au.toISOString(), titre:($('#prT').value||'').trim().slice(0,150), texte:($('#prX').value||'').trim().slice(0,1500)};
     DB.access.version++; DB.access.misAJour=new Date().toISOString(); persist();
     audit(on?'Semaine gratuite activée':'Semaine gratuite désactivée', on?`du ${dfr(du)} au ${dfr(au)}`:''); render(); toast(on?'Semaine gratuite enregistrée.':'Semaine gratuite désactivée.'); };
 }
@@ -1957,7 +1961,7 @@ function orphans(){ return Object.keys(DB.access.regles).filter(k=>!NODES[k]); }
 
 /* ---------- Annuler : chaque changement de la page « Cours gratuits et Premium » peut être défait ---------- */
 const UNDO_ACC = []; let UNDO_GEN = 0;
-function accSnap(){ const A = DB.access; return JSON.stringify({regles:A.regles||{}, questions:A.questions||{}, plusapp:A.plusapp||{}, fincorr:A.fincorr||{}, promo:A.promo||null, defaut:A.defaut}); }
+function accSnap(){ const A = DB.access; return JSON.stringify({regles:A.regles||{}, questions:A.questions||{}, plusapp:A.plusapp||{}, fincorr:A.fincorr||{}, promo:A.promo||null, contact:A.contact||null, defaut:A.defaut}); }
 function undoBar(){ const n = UNDO_ACC.length;
   return `<div id="undoacc" class="undobar" role="region" aria-label="Annuler" style="position:sticky;top:8px;z-index:30;display:${n?'flex':'none'};align-items:center;gap:10px;flex-wrap:wrap;background:var(--ink,#1d1b2e);color:#fff;border-radius:14px;padding:10px 14px;margin:0 0 14px;box-shadow:0 6px 20px rgba(0,0,0,.18)">
     <span style="flex:1;min-width:160px">↶ <b>${n}</b> modification${n>1?'s':''} sur cette page. Vous pouvez revenir en arrière.</span>
@@ -2212,9 +2216,43 @@ function cibleUn(x){ x = String(x||'').trim();
   if(x.startsWith('app:')){ const g = nomDe(x.slice(4)) || DB.profiles.find(q=>(q.appareils||[]).some(v=>String(v).includes(x.slice(4)))); return g ? (g.virtuel ? g.prenom : fullName(g)) : 'Un élève'; }
   return x.replace('-',' · '); }
 const cibleLabel = c => { const L = String(c||'tous').split(',').filter(Boolean); return L.length>3 ? L.slice(0,3).map(cibleUn).join(', ')+' et '+(L.length-3)+' autre'+(L.length>4?'s':'') : L.map(cibleUn).join(', '); };
+/* ---------- « Contacter l'administrateur » : carte en haut de l'accueil de l'appli, ouvre WhatsApp avec un message prêt ---------- */
+const CONTACT_DEF = ()=>({actif:false, titre:'📞 Contacter l’administrateur', texte:'Une question, un souci ? Écris-moi directement sur WhatsApp.', numero:'', nom:true,
+  messages:[{b:'💬 Je veux être en contact avec toi', m:'Bonjour, je veux être en contact avec toi.'},{b:'👥 Je veux être dans un groupe WhatsApp', m:'Bonjour, je veux être ajouté(e) dans un groupe WhatsApp.'},{b:'❓ J’ai une question sur l’appli', m:'Bonjour, j’ai une question sur l’application Révision INFAS.'}]});
+function contactCfg(){ const d = CONTACT_DEF(), c = Object.assign(d, DB.access.contact||{}); c.messages = [0,1,2].map(i=>Object.assign({b:'',m:''}, d.messages[i], ((DB.access.contact||{}).messages||[])[i]||{})); return c; }
+const waNum = n=>{ let d = String(n||'').replace(/\D/g,''); if(d.length===10) d = '225'+d; return d; };
+function contactApercu(c){ return `<div style="font-size:17px;font-weight:800">${esc(c.titre||'📞 Contacter l’administrateur')}</div>${c.texte?`<div class="muted" style="margin:4px 0 8px;white-space:pre-line">${esc(c.texte)}</div>`:''}${c.messages.filter(x=>x.b&&x.m).map(x=>`<div style="margin:6px 0 0;padding:10px 12px;border-radius:12px;background:#25d366;color:#fff;font-weight:700" title="${esc(x.m)}">${esc(x.b)}</div>`).join('')}`; }
+function contactCard(){
+  const c = contactCfg(), num = waNum(c.numero);
+  return `<div class="card" id="ctcard" style="margin-bottom:18px;border:2px solid ${c.actif?'#16a34a':'var(--line)'}"><div class="cardhead"><div class="grow"><h3>📞 Contacter l’administrateur <span class="pill ${c.actif?'ok':'hid'}">${c.actif?'Affiché':'Masqué'}</span></h3>
+    <p class="sub">Carte en haut de l’accueil de l’appli, avec les annonces. Chaque bouton ouvre <b>WhatsApp</b> avec le message prêt, l’élève n’a qu’à l’envoyer.</p></div></div>
+    <label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="ctOn" ${c.actif?'checked':''} style="width:22px;height:22px"> <b>Afficher sur l’accueil des élèves</b></label>
+    <div class="row wrap" style="gap:10px;margin-top:10px">
+      <div style="flex:1 1 220px"><label class="lbl" for="ctNum">Numéro WhatsApp</label><input class="field" id="ctNum" inputmode="tel" placeholder="07 00 00 00 00" value="${esc(c.numero||'')}"></div>
+      <div style="flex:2 1 260px"><label class="lbl" for="ctT">Titre</label><input class="field" id="ctT" maxlength="120" value="${esc(c.titre)}"></div></div>
+    <label class="lbl" for="ctX">Texte</label><textarea class="field" id="ctX" rows="2" maxlength="600">${esc(c.texte)}</textarea>
+    <div class="lbl" style="margin-top:10px">Les 3 messages proposés</div>
+    ${c.messages.map((x,i)=>`<div class="row wrap" style="gap:8px;margin:6px 0;padding:8px;border:1px solid var(--line);border-radius:12px"><div style="flex:1 1 200px"><label class="lbl" for="ctB${i}">Bouton ${i+1}</label><input class="field" id="ctB${i}" maxlength="60" value="${esc(x.b)}"></div><div style="flex:2 1 280px"><label class="lbl" for="ctM${i}">Message envoyé sur WhatsApp</label><textarea class="field" id="ctM${i}" rows="2" maxlength="1000">${esc(x.m)}</textarea></div></div>`).join('')}
+    <label class="row" style="gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="ctNom" ${c.nom?'checked':''} style="width:18px;height:18px"> Ajouter le nom de l’élève à la fin du message</label>
+    <div class="lbl" style="margin-top:12px">Aperçu (ce que verront les élèves une fois affichée)</div>
+    <div id="ctPrev" style="max-width:380px;border:2px solid #25d366;border-radius:16px;padding:12px 14px;background:var(--card,#fff)">${contactApercu(c)}</div>
+    <div style="margin-top:12px" class="row wrap"><button class="btn pri" id="ctGo">Enregistrer</button>${num?`<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${num}?text=${encodeURIComponent(c.messages[0].m)}">Essayer le 1er bouton</a>`:''}<span class="muted small">Les élèves le voient à la prochaine ouverture de l’appli (au plus 5 minutes).</span></div></div>`;
+}
+function bindContact(){
+  if(!$('#ctGo')) return;
+  const maj = ()=>{ const p = $('#ctPrev'); if(!p) return; p.innerHTML = contactApercu({titre:$('#ctT').value.trim(), texte:$('#ctX').value.trim(), messages:[0,1,2].map(i=>({b:$('#ctB'+i).value.trim(), m:$('#ctM'+i).value.trim()}))}); };
+  ['ctT','ctX','ctB0','ctB1','ctB2','ctM0','ctM1','ctM2'].forEach(id=>{ const x = $('#'+id); if(x) x.oninput = maj; });
+  $('#ctGo').onclick = ()=>{ const on = $('#ctOn').checked, num = waNum($('#ctNum').value);
+    if(on && !/^\d{8,15}$/.test(num)){ toast('Écris le numéro WhatsApp (10 chiffres, ou l’indicatif + le numéro).'); return; }
+    const M = [0,1,2].map(i=>({b:($('#ctB'+i).value||'').trim().slice(0,60), m:($('#ctM'+i).value||'').trim().slice(0,1000)}));
+    if(on && !M.some(x=>x.b&&x.m)){ toast('Remplis au moins un bouton et son message.'); return; }
+    DB.access.contact = {actif:on, numero:($('#ctNum').value||'').trim(), titre:($('#ctT').value||'').trim().slice(0,120), texte:($('#ctX').value||'').trim().slice(0,600), nom:$('#ctNom').checked, messages:M};
+    DB.access.version++; DB.access.misAJour = new Date().toISOString(); persist();
+    audit(on?'Carte « Contacter l’administrateur » affichée':'Carte « Contacter l’administrateur » masquée', 'Accueil'); render(); toast(on?'Carte de contact enregistrée.':'Carte de contact masquée.'); };
+}
 VIEWS.annonces = ()=>{
   const L = [...DB.announcements].sort((a,b)=>b.du.localeCompare(a.du));
-  return headHTML('Annonces', 'Bannières affichées en haut de l’appli des élèves.', `<button class="btn pri" id="newann">${ic('plus')}Nouvelle annonce</button>`) + `
+  return headHTML('Annonces', 'Bannières affichées en haut de l’appli des élèves.', `<button class="btn pri" id="newann">${ic('plus')}Nouvelle annonce</button>`) + contactCard() + `
   <div class="card">${L.map(a=>{ const live=annonceLive(a); return `<div class="annonce">
     <div style="flex:1;min-width:0"><div class="banner" style="background:${esc(a.couleur)}"><b>${esc(a.titre)}</b> — ${esc(a.texte)}</div>
       <div class="row wrap" style="margin-top:8px;font-size:13px"><span class="pill ${live?'ok':'hid'}">${live?'En ligne':a.actif?'Programmée ou terminée':'Désactivée'}</span><span class="muted">${cibleLabel(a.cible)} · du ${dfr(a.du)} au ${dfr(a.au)}</span></div></div>
@@ -2222,6 +2260,7 @@ VIEWS.annonces = ()=>{
   </div>`; }).join('') || '<div class="empty">Aucune annonce. Créez-en une pour informer vos élèves.</div>'}</div>`;
 };
 AFTER.annonces = ()=>{
+  bindContact();
   $('#newann').onclick = ()=>annonceModal();
   document.querySelectorAll('[data-ann-toggle]').forEach(b=>b.onclick=()=>{ const a=api.get('announcements',b.dataset.annToggle); api.update('announcements',a.id,{actif:!a.actif}); audit(a.actif?'Annonce activée':'Annonce désactivée', a.titre); render(); });
   document.querySelectorAll('[data-ann-edit]').forEach(b=>b.onclick=()=>annonceModal(api.get('announcements',b.dataset.annEdit)));
@@ -2393,6 +2432,28 @@ AFTER.signalements = ()=>{
    ===================================================================== */
 const QX = {etat:'', W:null, mid:'', q:'', suspects:null, corr:null, err:'', lim:40};
 const QL = 'ABCDEFGH';
+/* ---------- 🧭 Questions à vérifier : identiques aux réponses différentes, similaires aux questions corrigées (calculé dans l'appli lue) ---------- */
+function qxConflits(){ return qxEval(`(()=>{if(typeof riDoublons!=='function')return null;const n=x=>String(x==null?'':x).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const cle=y=>y.t==='vf'?'v'+(y.v?1:0):y.t==='qcm'?(Array.isArray(y.am)&&y.am.length?y.am:[y.a]).map(i=>n((y.o||[])[i])).sort().join('|'):n(y.r);
+  const vu={},R=[];for(const id in QI){if(vu[id])continue;const d=riDoublons(id);if(!d.length)continue;d.forEach(x=>vu[x]=1);const G=[id].concat(d);if(new Set(G.map(x=>cle(QI[x]))).size>1)R.push(G)}return R})()`); }
+function qxRepTxt(q){ if(!q) return ''; if(q.t==='vf') return q.v?'Vrai':'Faux'; if(q.t==='qcm') return (Array.isArray(q.am)&&q.am.length?q.am:[q.a]).map(i=>QL[i]+'. '+((q.o||[])[i]||'')).join(' ; '); return q.r||''; }
+function qxLigneV(id, extra){ const q = qxQ(id); if(!q) return '';
+  return `<div class="row wrap" style="gap:10px;padding:8px 0;border-top:1px solid var(--line);align-items:flex-start"><div style="flex:1;min-width:220px"><b>${esc(matName(q.m))}</b> <span class="muted" style="font-size:12.5px">· ${esc(id)}${q.__corr?' · ✅ corrigée':''}</span><div style="font-size:14px;margin-top:2px">${esc(String(q.q||'').slice(0,180))}</div><div class="muted" style="font-size:13px;margin-top:2px">✔ ${esc(qxRepTxt(q))}</div>${extra||''}</div><button class="btn sm" data-qedit="${esc(id)}">✏️ Corriger</button></div>`; }
+function qxVerifHTML(){
+  if(qxEval('typeof riDoublons')!=='function') return `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 4px">🧭 Questions à vérifier</h3><p class="muted" style="margin:0">Disponible quand l’appli lue (${UI.qSite==='test'?'site test':'site élèves'}) est à jour.</p></div>`;
+  const C = (QX.corr||[]).filter(c=>c.actif).slice(0,30), O = QX.simOuv||{};
+  const cf = QX.conf;
+  return `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 4px">🧭 Questions à vérifier</h3>
+    <p class="muted" style="margin:0 0 8px;font-size:13.5px">Quand tu corriges une question, la même question dans les autres sujets (même énoncé, mêmes propositions) est corrigée en même temps.</p>
+    <button class="btn" id="qxconf">${QX.confOuv?'▲ Masquer':'⚠️ Questions identiques avec des réponses différentes'}${cf?' · '+cf.length:''}</button>
+    ${QX.confOuv&&cf?(cf.length?`<p class="muted" style="margin:8px 0 0;font-size:13.5px">Même énoncé et mêmes propositions, mais pas la même bonne réponse : l’une est sûrement fausse. Corrige la bonne réponse, les autres suivront.</p>`+cf.slice(0,40).map(G=>`<div style="border:1.5px solid #fcd34d;background:#fffbeb;border-radius:12px;padding:0 10px;margin:8px 0">${G.map(id=>qxLigneV(id)).join('')}</div>`).join('')+(cf.length>40?`<p class="muted">… et ${cf.length-40} autre(s).</p>`:''):'<p class="muted">✅ Aucune : toutes les questions identiques ont la même réponse.</p>'):''}
+    <h4 style="margin:14px 0 4px">🔎 Questions similaires aux questions corrigées</h4>
+    ${C.length?C.map(c=>{ const D = qxEval('riDoublons('+JSON.stringify(c.qid)+')')||[], ouv = O[c.qid], S = ouv ? (qxEval('riSimilaires('+JSON.stringify(c.qid)+',10,.5)')||[]) : null;
+      return `<div style="border:1px solid var(--line);border-radius:12px;padding:0 10px 8px;margin:8px 0">${qxLigneV(c.qid, D.length?`<div style="font-size:13px;margin-top:4px">🔁 <b>${D.length}</b> question${D.length>1?'s':''} identique${D.length>1?'s':''} dans d’autres sujets, corrigée${D.length>1?'s':''} aussi</div>`:'')}
+        <button class="btn sm" data-qxsim="${esc(c.qid)}">${ouv?'▲ Masquer':'🔎 Questions similaires à vérifier'}</button>
+        ${S?(S.length?`<p class="muted" style="margin:6px 0 0;font-size:13px">Elles se ressemblent sans être identiques : vérifie si la même correction s’applique.</p>`+S.map(x=>qxLigneV(x.id, `<div class="muted" style="font-size:12.5px">ressemblance ${x.score} %</div>`)).join(''):'<p class="muted" style="margin:6px 0 0">Aucune question similaire trouvée.</p>'):''}</div>`; }).join('') : '<p class="muted" style="margin:0">Aucune correction publiée pour l’instant.</p>'}
+  </div>`;
+}
 function qxSite(){ if(window.__QSITE) return window.__QSITE; const t = UI.qSite || (/revision-infas-test/.test(location.href) ? 'test' : 'eleves'); return t==='test' ? CP_TEST : portailUrl(); }
 function qxCharger(force){
   if(QX.etat==='charge' && !force) return; if(QX.etat==='ok' && !force) return;
@@ -2441,7 +2502,7 @@ VIEWS.questions = ()=>{
   const C = (QX.corr||[]);
   const corr = C.length ? `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 6px">✅ Corrections publiées · ${C.filter(c=>c.actif).length}</h3>${C.slice(0,30).map(c=>`<div class="row wrap" style="gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span style="flex:1;min-width:200px"><b>${esc(matName(String(c.qid).split('.')[0]))}</b> · ${esc(c.qid)} <span class="muted">· ${dhfr(c.t)}${c.note?' · '+esc(c.note):''}</span></span>${c.actif?`<span class="pill ok">En ligne</span><button class="btn sm" data-qedit="${esc(c.qid)}">Modifier</button><button class="btn sm" data-qann="${esc(c.qid)}">Annuler</button>`:'<span class="pill">Annulée</span>'}</div>`).join('')}</div>` : '';
   const qq = nrmTxt((QX.q||'').trim()), L = qxListe(QX.mid).filter(x=>!qq || nrmTxt(x.q+' '+x.s+' '+x.id).includes(qq));
-  return head + susp + corr + `<div class="card">
+  return head + susp + corr + qxVerifHTML() + `<div class="card">
     <h3 style="margin:0 0 10px">📚 Toutes les questions</h3>
     <div class="row wrap" style="gap:10px;margin-bottom:10px"><select class="field" id="qxmid" style="max-width:340px" aria-label="Matière">${mats.map(m=>`<option value="${esc(m.id)}" ${m.id===QX.mid?'selected':''}>${esc(m.nom)} · ${m.n}</option>`).join('')}</select>
       <input class="field" id="qxq" placeholder="Chercher des mots de la question ou son numéro…" value="${esc(QX.q||'')}" style="flex:1;min-width:220px" aria-label="Chercher une question"></div>
@@ -2451,6 +2512,8 @@ VIEWS.questions = ()=>{
   </div>`;
 };
 AFTER.questions = ()=>{
+  const vc = $('#qxconf'); if(vc) vc.onclick = ()=>{ QX.confOuv = !QX.confOuv; if(QX.confOuv && !QX.conf){ vc.textContent = '⏳ Recherche…'; setTimeout(()=>{ QX.conf = qxConflits(); render(); }, 30); return; } render(); };
+  document.querySelectorAll('[data-qxsim]').forEach(b=>b.onclick=()=>{ const k = b.dataset.qxsim; QX.simOuv = QX.simOuv||{}; QX.simOuv[k] = !QX.simOuv[k]; render(); });
   document.querySelectorAll('[data-qsite]').forEach(b=>b.onclick=()=>{ UI.qSite = b.dataset.qsite; QX.etat=''; QX.mid=''; render(); });
   const re = $('#qxre'); if(re) re.onclick = ()=>{ QX.etat=''; render(); };
   const m = $('#qxmid'); if(m) m.onchange = ()=>{ QX.mid = m.value; QX.lim = 40; render(); };
