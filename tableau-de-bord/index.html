@@ -2386,6 +2386,15 @@ function editeurUrl(){ return String(getCfg().editeur || EDITEUR_DEFAUT).trim().
 const EDITEUR_DEFAUT = 'https://qidevelloper-cpu.github.io/revision-infas-editeur/';
 /* images d'explication : copiées du stockage privé des signalements vers le stockage PUBLIC « explications » (lisible par les élèves) */
 const xiOk = u => typeof u==='string' && /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/explications\/[A-Za-z0-9._\/-]+$/.test(u);
+/* image choisie sur l'appareil : réduite (1600 px, JPEG) avant l'envoi */
+function xiReduire(f){ return new Promise((ok,ko)=>{ const u = URL.createObjectURL(f), im = new Image(); im.onload = ()=>{ const k = Math.min(1, 1600/Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width*k); c.height = Math.round(im.height*k);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(im,0,0,c.width,c.height); URL.revokeObjectURL(u); c.toBlob(b=>b?ok(b):ko(new Error('image')), 'image/jpeg', .85); }; im.onerror = ()=>{ URL.revokeObjectURL(u); ko(new Error('image')); }; im.src = u; }); }
+async function xiEnvoyer(blob, qid){
+  const dest = String(qid).replace(/[^A-Za-z0-9._-]/g,'_') + '/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.jpg';
+  const up = await SB.storage.from('explications').upload(dest, blob, {contentType:'image/jpeg', upsert:false, cacheControl:'31536000'});
+  if(up.error) throw (/bucket|not found|policy|row-level|security/i.test(String(up.error.message||up.error)) ? new Error('Stockage des images pas encore installé : collez supabase/outils/2_images_explications.sql dans Supabase (SQL Editor).') : up.error);
+  const u = SB.storage.from('explications').getPublicUrl(dest).data.publicUrl; if(!xiOk(u)) throw new Error('Adresse d’image inattendue.'); return u;
+}
 async function xiCopier(path, qid){
   const manque = e => /bucket|not found|policy|row-level|security/i.test(String((e&&e.message)||e)) ? new Error('Stockage des images pas encore installé : collez supabase/outils/2_images_explications.sql dans Supabase (SQL Editor).') : e;
   const d = await SB.storage.from('signalements').download(path); if(d.error || !d.data) throw new Error('Photo introuvable : '+((d.error&&d.error.message)||path));
@@ -2438,7 +2447,22 @@ function qxConflits(){ return qxEval(`(()=>{if(typeof riDoublons!=='function')re
   const vu={},R=[];for(const id in QI){if(vu[id])continue;const d=riDoublons(id);if(!d.length)continue;d.forEach(x=>vu[x]=1);const G=[id].concat(d);if(new Set(G.map(x=>cle(QI[x]))).size>1)R.push(G)}return R})()`); }
 function qxRepTxt(q){ if(!q) return ''; if(q.t==='vf') return q.v?'Vrai':'Faux'; if(q.t==='qcm') return (Array.isArray(q.am)&&q.am.length?q.am:[q.a]).map(i=>QL[i]+'. '+((q.o||[])[i]||'')).join(' ; '); return q.r||''; }
 function qxLigneV(id, extra){ const q = qxQ(id); if(!q) return '';
-  return `<div class="row wrap" style="gap:10px;padding:8px 0;border-top:1px solid var(--line);align-items:flex-start"><div style="flex:1;min-width:220px"><b>${esc(matName(q.m))}</b> <span class="muted" style="font-size:12.5px">· ${esc(id)}${q.__corr?' · ✅ corrigée':''}</span><div style="font-size:14px;margin-top:2px">${esc(String(q.q||'').slice(0,180))}</div><div class="muted" style="font-size:13px;margin-top:2px">✔ ${esc(qxRepTxt(q))}</div>${extra||''}</div><button class="btn sm" data-qedit="${esc(id)}">✏️ Corriger</button></div>`; }
+  return `<div class="row wrap" style="gap:10px;padding:8px 0;border-top:1px solid var(--line);align-items:flex-start"><div style="flex:1;min-width:220px"><b>${esc(matName(q.m))}</b> <span class="muted" style="font-size:12.5px">· ${esc(id)}${q.__corr?' · ✅ corrigée':''}</span><div style="font-size:14px;margin-top:2px">${esc(String(q.q||'').slice(0,180))}</div><div class="muted" style="font-size:13px;margin-top:2px">✔ ${esc(qxRepTxt(q))}</div>${extra||''}</div><div class="row" style="gap:6px"><button class="btn sm" data-qedit="${esc(id)}">✏️ Corriger</button><button class="btn sm" data-qshare="${esc(id)}">📤 Partager</button></div></div>`; }
+/* ---------- 📤 partager une question : lien qui ouvre l'appli des élèves directement sur la question, à cocher ---------- */
+function qxLienQ(qid){ const u = new URL(qxSite(), location.href); u.searchParams.set('q', qid); return u.href; }
+function qxPartager(qid, part){
+  const q = qxQ(qid); if(!q) return; const lien = qxLienQ(qid);
+  const def = `📌 Question à revoir (${matName(q.m)})\n${part?`Beaucoup d’entre vous se trompent sur cette question (${part} % ont choisi une autre réponse). `:''}Reprends-la et coche ta réponse : l’explication s’affiche après.\n\n« ${String(q.q||'').slice(0,160)}${String(q.q||'').length>160?'…':''} »`;
+  openModal(`<h2 style="margin:0 0 6px;font-family:var(--display)">📤 Partager la question</h2><p class="muted" style="margin:0 0 8px">L’élève qui touche le lien arrive <b>directement sur la question</b> dans l’appli et peut la cocher.</p>
+    <label class="lbl" for="qsM">Message (ajoute ton explication ou un rappel de la notion)</label><textarea class="field" id="qsM" rows="7" maxlength="2000">${esc(def)}</textarea>
+    <label class="lbl" for="qsL">Lien</label><input class="field" id="qsL" readonly value="${esc(lien)}" onclick="this.select()">
+    <div class="row wrap" style="gap:8px;margin-top:14px;justify-content:flex-end"><button class="btn" id="mno">Fermer</button><button class="btn" id="qsC">📋 Copier</button>${navigator.share?'<button class="btn" id="qsS">📤 Autres applis</button>':''}<button class="btn pri" id="qsW" style="background:#25d366;border-color:#25d366">💬 WhatsApp</button></div>`);
+  const txt = ()=>($('#qsM').value.trim()+'\n👉 '+lien);
+  $('#mno').onclick = closeModal;
+  $('#qsW').onclick = ()=>{ window.open('https://wa.me/?text='+encodeURIComponent(txt()), '_blank', 'noopener'); audit('Question partagée', matName(q.m)+' · '+qid); };
+  $('#qsC').onclick = async ()=>{ try{ await navigator.clipboard.writeText(txt()); toast('Message et lien copiés.'); }catch(e){ $('#qsL').select(); toast('Copie impossible : sélectionne le lien.'); } };
+  const sh = $('#qsS'); if(sh) sh.onclick = ()=>navigator.share({title:'Question à revoir', text:txt()}).catch(()=>{});
+}
 function qxVerifHTML(){
   if(qxEval('typeof riDoublons')!=='function') return `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 4px">🧭 Questions à vérifier</h3><p class="muted" style="margin:0">Disponible quand l’appli lue (${UI.qSite==='test'?'site test':'site élèves'}) est à jour.</p></div>`;
   const C = (QX.corr||[]).filter(c=>c.actif).slice(0,30), O = QX.simOuv||{};
@@ -2498,7 +2522,7 @@ VIEWS.questions = ()=>{
       return `<div class="row wrap" style="gap:12px;padding:10px 0;border-top:1px solid var(--line);align-items:flex-start"><div style="flex:1;min-width:240px"><b>${esc(matName(z.q.m))}</b> <span class="muted" style="font-size:12.5px">· ${esc(z.qid)}</span><div style="font-size:14px;margin-top:2px">${esc(String(z.q.q).slice(0,180))}</div>
         <div style="margin-top:6px;font-size:13.5px"><b style="color:var(--danger,#c62828)">${Math.round(z.part*100)} % ont choisi ${esc(qxCleTxt(z.top))}</b> alors que le corrigé dit <b>${esc(qxCleTxt(z.cle))}</b> · ${fmt(tot)} réponses</div>
         <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">${ks.map(k=>`<span class="pill" style="font-weight:700;${k===z.cle?'background:#e9f9ef;color:#166534':''}">${esc(qxCleTxt(k))} · ${Math.round(dist[k]/tot*100)} %</span>`).join('')}</div></div>
-        <button class="btn pri" data-qedit="${esc(z.qid)}">✏️ Corriger</button></div>`; }).join('') : '<p class="muted" style="margin:6px 0 0">Aucun corrigé suspect pour l’instant (il faut au moins 10 réponses à une question). Les réponses arrivent avec la nouvelle version de l’appli.</p>'}</div>`;
+        <div class="row" style="gap:6px;flex-wrap:wrap"><button class="btn pri" data-qedit="${esc(z.qid)}">✏️ Corriger</button><button class="btn" data-qshare="${esc(z.qid)}" data-qpart="${Math.round(z.part*100)}">📤 Partager</button></div></div>`; }).join('') : '<p class="muted" style="margin:6px 0 0">Aucun corrigé suspect pour l’instant (il faut au moins 10 réponses à une question). Les réponses arrivent avec la nouvelle version de l’appli.</p>'}</div>`;
   const C = (QX.corr||[]);
   const corr = C.length ? `<div class="card" style="margin-bottom:16px"><h3 style="margin:0 0 6px">✅ Corrections publiées · ${C.filter(c=>c.actif).length}</h3>${C.slice(0,30).map(c=>`<div class="row wrap" style="gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span style="flex:1;min-width:200px"><b>${esc(matName(String(c.qid).split('.')[0]))}</b> · ${esc(c.qid)} <span class="muted">· ${dhfr(c.t)}${c.note?' · '+esc(c.note):''}</span></span>${c.actif?`<span class="pill ok">En ligne</span><button class="btn sm" data-qedit="${esc(c.qid)}">Modifier</button><button class="btn sm" data-qann="${esc(c.qid)}">Annuler</button>`:'<span class="pill">Annulée</span>'}</div>`).join('')}</div>` : '';
   const qq = nrmTxt((QX.q||'').trim()), L = qxListe(QX.mid).filter(x=>!qq || nrmTxt(x.q+' '+x.s+' '+x.id).includes(qq));
@@ -2520,6 +2544,7 @@ AFTER.questions = ()=>{
   const q = $('#qxq'); if(q) q.oninput = ()=>{ const pos = q.selectionStart; QX.q = q.value; clearTimeout(q.t); q.t = setTimeout(()=>{ render(); const n = $('#qxq'); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} } }, 250); };
   const pl = $('#qxplus'); if(pl) pl.onclick = ()=>{ QX.lim += 60; render(); };
   bindQedit();
+  document.querySelectorAll('[data-qshare]').forEach(b=>b.onclick=()=>qxPartager(b.dataset.qshare, b.dataset.qpart));
   document.querySelectorAll('[data-qann]').forEach(b=>b.onclick=()=>confirmModal('Annuler la correction ?', 'La question revient à sa version d’origine sur les téléphones, à leur prochaine ouverture.', 'Oui, annuler', async ()=>{
     try{ const {data,error} = await SB.rpc('annuler_correction', {p_qid:b.dataset.qann}); if(error) throw error; closeModal(); audit('Correction annulée', b.dataset.qann); toast('Correction annulée.'); QX.etat=''; await qxSuspects(true); render(); }
     catch(e){ toast('Annulation impossible : '+(typeof frErr==='function'?frErr(e):e.message)); } }));
@@ -2667,16 +2692,19 @@ function qxEditer(qid, reps){
   const R = (reps || DB.reports.filter(r=>r.qid===qid && !r.reponse && r.appareil));
   /* images de l'explication : photos jointes aux signalements de cette question (Oui / Non pour chacune) + images déjà intégrées */
   const PH = DB.reports.filter(r=>r.qid===qid && r.photo).map(r=>r.photo).filter((p,i,a)=>a.indexOf(p)===i);
-  const XI0 = Array.isArray(q0.xi) ? q0.xi.filter(xiOk) : [], KEEP = XI0.map(()=>true), ADD = PH.map(()=>false);
+  const XI0 = Array.isArray(q0.xi) ? q0.xi.filter(xiOk) : [], KEEP = XI0.map(()=>true), ADD = PH.map(()=>false), NEW = [];
   const drawImg = ()=>{
     const z = $('#qximg'); if(!z) return;
-    if(!PH.length && !XI0.length){ z.innerHTML = ''; return; }
     const bt = (attr,i,on,v,l)=>`<button type="button" class="btn sm" ${attr}="${i}" data-v="${v}" aria-pressed="${on}" style="min-width:84px;border:2px solid ${on?(v?'#16a34a':'#dc2626'):'var(--line)'};background:${on?(v?'#effbf2':'#fef2f2'):'transparent'};font-weight:800">${on?'✓ ':''}${l}</button>`;
     z.innerHTML = `<div class="lbl" style="margin-top:12px">🖼️ Images de l’explication</div>`
       + XI0.map((u,i)=>`<div class="row" style="gap:10px;align-items:center;margin:6px 0;padding:8px;border:1.5px solid var(--line);border-radius:12px;${KEEP[i]?'':'opacity:.55'}"><a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Image de l’explication" style="width:84px;height:84px;object-fit:cover;border-radius:8px"></a><div style="flex:1"><b>Image déjà dans l’explication</b><div class="row" style="gap:8px;margin-top:6px">${bt('data-xikeep',i,KEEP[i],1,'Garder')}${bt('data-xikeep',i,!KEEP[i],0,'Retirer')}</div></div></div>`).join('')
+      + NEW.map((x,i)=>`<div class="row" style="gap:10px;align-items:center;margin:6px 0;padding:8px;border:1.5px solid #16a34a;border-radius:12px"><img src="${x.u}" alt="Nouvelle image" style="width:84px;height:84px;object-fit:cover;border-radius:8px"><div style="flex:1"><b>Nouvelle image</b><div class="cnote">✅ Sera ajoutée sous l’explication à la publication (${Math.round(x.b.size/1024)} Ko).</div><button type="button" class="btn sm" data-xinew="${i}" style="margin-top:6px">✕ Retirer</button></div></div>`).join('')
+      + `<label class="btn sm" style="margin:6px 0;display:inline-flex;gap:6px;align-items:center;cursor:pointer">➕ Ajouter une image ou une photo<input type="file" id="qxfile" accept="image/*" multiple style="display:none"></label>`
       + PH.map((p,i)=>`<div class="row" style="gap:10px;align-items:center;margin:6px 0;padding:8px;border:1.5px solid ${ADD[i]?'#16a34a':'var(--line)'};border-radius:12px"><div data-xiph="${esc(p)}" style="width:84px;height:84px;display:flex;align-items:center;justify-content:center;background:var(--soft,#f4f2fb);border-radius:8px;font-size:12px">📷…</div><div style="flex:1"><b>Photo envoyée par l’élève : l’intégrer à l’explication de la réponse ?</b><div class="row" style="gap:8px;margin-top:6px">${bt('data-xiadd',i,ADD[i],1,'Oui')}${bt('data-xiadd',i,!ADD[i],0,'Non')}</div><div class="cnote" style="margin-top:4px">${ADD[i]?'✅ Sera visible par tous les élèves sous l’explication.':'Reste privée (visible seulement ici).'}</div></div></div>`).join('');
     z.querySelectorAll('[data-xikeep]').forEach(x=>x.onclick=()=>{ KEEP[+x.dataset.xikeep] = x.dataset.v==='1'; drawImg(); });
     z.querySelectorAll('[data-xiadd]').forEach(x=>x.onclick=()=>{ ADD[+x.dataset.xiadd] = x.dataset.v==='1'; drawImg(); });
+    z.querySelectorAll('[data-xinew]').forEach(x=>x.onclick=()=>{ const r = NEW.splice(+x.dataset.xinew,1)[0]; try{ URL.revokeObjectURL(r.u); }catch(e){} drawImg(); });
+    const fi = $('#qxfile'); if(fi) fi.onchange = async ()=>{ for(const f of [...fi.files]){ if(!/^image\//.test(f.type)){ toast('Ce fichier n’est pas une image.'); continue; } try{ const b = await xiReduire(f); NEW.push({b, u:URL.createObjectURL(b)}); }catch(e){ toast('Image illisible : '+f.name); } } drawImg(); };
     z.querySelectorAll('[data-xiph]').forEach(async el=>{ const u = await photoUrl(el.dataset.xiph); el.innerHTML = u ? `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Photo envoyée par l’élève" style="width:84px;height:84px;object-fit:cover;border-radius:8px"></a>` : '📷 Photo'; });
   };
   const draw = ()=>{
@@ -2715,12 +2743,12 @@ function qxEditer(qid, reps){
     else if(T==='vf'){ if(VV==null){ toast('Touchez « Vrai » ou « Faux ».'); return; } n.v = VV; n.o = null; n.a = null; n.am = null; if(q0.r!=null) n.r = null; if(q0.acc!=null) n.acc = null; }
     else { const L = $('#qxr').value.split('\n').map(x=>x.trim()).filter(Boolean); if(!L.length){ toast('Écrivez la réponse attendue.'); return; } n.r = L[0]; n.acc = L.slice(1); n.o = null; n.a = null; n.am = null; n.v = null; }
     const champs = {}; Object.keys(n).forEach(k=>{ const a = n[k]==null||n[k]===''?null:n[k], b = q0[k]==null||q0[k]===''?null:q0[k]; if(JSON.stringify(a)!==JSON.stringify(b)) champs[k] = n[k]===''?null:n[k]; });
-    const xiAjout = PH.filter((p,i)=>ADD[i]), xiGarde = XI0.filter((u,i)=>KEEP[i]), xiChange = xiAjout.length>0 || xiGarde.length!==XI0.length;
+    const xiAjout = PH.filter((p,i)=>ADD[i]), xiGarde = XI0.filter((u,i)=>KEEP[i]), xiChange = xiAjout.length>0 || NEW.length>0 || xiGarde.length!==XI0.length;
     if(!Object.keys(champs).length && !xiChange){ toast('Rien n’a changé.'); return; }
-    if(xiAjout.length && (MODE!=='supabase' || !SB)){ toast('Connectez-vous au compte administrateur pour intégrer une photo.'); return; }
+    if((xiAjout.length || NEW.length) && (MODE!=='supabase' || !SB)){ toast('Connectez-vous au compte administrateur pour ajouter une image.'); return; }
     const b = $('#mok'); b.disabled = true; b.textContent = 'Publication…';
     try{
-      if(xiChange){ const U = xiGarde.slice(); for(const p of xiAjout){ b.textContent = '📷 Envoi de l’image…'; U.push(await xiCopier(p, qid)); } champs.xi = U.length ? U : null; b.textContent = 'Publication…'; }
+      if(xiChange){ const U = xiGarde.slice(); for(const p of xiAjout){ b.textContent = '📷 Envoi de l’image…'; U.push(await xiCopier(p, qid)); } for(const x of NEW){ b.textContent = '📷 Envoi de l’image…'; U.push(await xiEnvoyer(x.b, qid)); } champs.xi = U.length ? U : null; b.textContent = 'Publication…'; }
       /* une question déjà corrigée : on GARDE les champs de la correction précédente (énoncé, réponse…) et on y ajoute les nouveaux,
          sinon la nouvelle correction remplaçait l'ancienne (ex. énoncé corrigé puis réponse corrigée : l'énoncé était perdu) */
       if(MODE==='supabase' && SB){ try{ const {data,error} = await SB.rpc('corrections_liste'); if(!error && Array.isArray(data)) QX.corr = data; }catch(e){} }

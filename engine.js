@@ -3753,4 +3753,44 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  const H=SCREENS.home&&SCREENS.home.blocks;if(H&&!H.includes('home.contact'))H.splice(Math.min(1,H.length),0,'home.contact');
  const _lo=layoutOf;layoutOf=function(sc){const L=_lo.apply(this,arguments);if(sc!=='home'||!Array.isArray(L)||L.some(b=>b.id==='home.contact'))return L;const X=L.slice();X.splice(Math.min(1,X.length),0,{id:'home.contact',inst:'home.contact'});return X};
 })();
+/* ======================= DOCUMENT DE RÉVISION : une tuile de couleur par matière =======================
+   L'accueil montre les matières en petites tuiles colorées (2 par ligne) ; un toucher ouvre les sujets de la matière en dessous. */
+(function(){const b=BLK['home.sujets'];if(!b)return;
+ const COUL=['#4361ee','#f77f00','#2a9d8f','#e63973','#7b2cbf','#0096c7','#d4a017','#e63946','#2b9348','#6d597a'];
+ const court=t=>String(t||'').replace(/^\s*(document|doc\.?)\s+de\s+r[ée]vision\s*/i,'').trim()||String(t||'');
+ window.riDocOuv=function(i){const W=document.querySelector('.ri-doc');if(!W)return;const d=W.querySelectorAll('details.hsuj')[i];if(!d)return;const on=!d.open;d.open=on;if(on)setTimeout(()=>d.scrollIntoView({behavior:'smooth',block:'start'}),30)};
+ window.riDocT=function(d){const W=d.closest('.ri-doc');if(!W)return;const D=[...W.querySelectorAll('details.hsuj')],i=D.indexOf(d),T=W.querySelectorAll('.ri-doct');
+  if(d.open){D.forEach(x=>{if(x!==d&&x.open)x.open=false});window.__riDocO=d.dataset.k}else if(window.__riDocO===d.dataset.k)window.__riDocO=null;
+  T.forEach((t,j)=>t.classList.toggle('on',!!(D[j]&&D[j].open)))};
+ const _h=b.html;b.html=function(){const h=_h.apply(this,arguments);if(!h||EDITMODE&&!/details/.test(h))return h;const W=document.createElement('div');W.innerHTML=h;
+  const D=[...W.querySelectorAll(':scope>details.hsuj')];if(!D.length)return h;const tete=W.querySelector(':scope>.secT');
+  const tu=D.map((d,i)=>{const bb=d.querySelector('summary b'),sm=d.querySelector('summary small'),t=bb?bb.textContent:'',m=t.match(/^(\S+)\s+(.*)$/)||['',' ',t],emo=m[1],nom=court(m[2]);
+   const n=sm?(sm.textContent.match(/(\d+)\s*\S*/)||[])[0]||'':'';d.removeAttribute('open');d.dataset.k=t;d.setAttribute('ontoggle','riDocT(this)');d.style.setProperty('--rc',COUL[i%COUL.length]);
+   if(window.__riDocO===t)d.setAttribute('open','');
+   return `<button type="button" class="ri-doct${window.__riDocO===t?' on':''}" style="--rc:${COUL[i%COUL.length]}" onclick="riDocOuv(${i})" aria-label="${esc(t)}"><span class="e">${esc(emo)}</span><b>${esc(nom)}</b><small>${esc(n)}</small></button>`}).join('');
+  const g=document.createElement('div');g.className='ri-docg';g.innerHTML=tu;
+  const box=document.createElement('div');box.className='ri-doc';if(tete)box.appendChild(tete);box.appendChild(g);D.forEach(d=>box.appendChild(d));
+  return box.outerHTML};
+ const st=document.createElement('style');st.textContent=`.ri-docg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+ .ri-doct{all:unset;box-sizing:border-box;cursor:pointer;background:var(--rc);color:#fff;border-radius:16px;padding:9px 9px 8px;min-height:84px;max-height:112px;display:flex;flex-direction:column;justify-content:flex-start;gap:4px;box-shadow:0 6px 16px -8px var(--rc);transition:transform .15s,box-shadow .15s;overflow:hidden;position:relative}
+ .ri-doct:active{transform:scale(.97)}.ri-doct.on{outline:3px solid #fff;box-shadow:0 0 0 3px var(--rc),0 8px 20px -8px var(--rc)}
+ .ri-doct .e{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+ .ri-doct b{font-size:12px;line-height:1.15;hyphens:auto;font-weight:800;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-transform:uppercase}
+ .ri-doct small{font-size:11px;opacity:.92;font-weight:600}
+ .ri-doc details.hsuj:not([open]){display:none}.ri-doc details.hsuj{border:2px solid var(--rc);scroll-margin-top:80px}
+ .ri-doc details.hsuj>summary{list-style:none;display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ri-doc details.hsuj>summary::-webkit-details-marker{display:none}
+ .ri-doc details.hsuj>summary::after{content:'✕';margin-left:auto;width:30px;height:30px;border-radius:50%;background:var(--rc);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800}
+ @media(max-width:340px){.ri-docg{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:640px){.ri-docg{grid-template-columns:repeat(4,minmax(0,1fr))}.ri-doct b{font-size:13.5px}}@media(min-width:960px){.ri-docg{grid-template-columns:repeat(5,minmax(0,1fr))}}`;
+ document.head.appendChild(st)})();
+/* ======================= LIEN VERS UNE QUESTION (partagé depuis le tableau de bord, sur WhatsApp…) =======================
+   …/?q=<identifiant> : l'appli s'ouvre directement sur la question, prête à être cochée. */
+(function(){let P=null;try{const u=new URL(location.href);P=u.searchParams.get('q')||(location.hash.match(/[#&]q=([^&]+)/)||[])[1]||null;if(P){P=decodeURIComponent(P);u.searchParams.delete('q');history.replaceState(null,'',u.pathname+u.search+(location.hash.replace(/[#&]q=[^&]+/,'')||''));sessionStorage.setItem('ri_lienq',P)}else P=sessionStorage.getItem('ri_lienq')}catch(e){}
+ if(!P||(typeof EDITMODE!=='undefined'&&EDITMODE)||window.PORTAIL_EDITOR)return;let n=0;
+ (function w(){if(++n>600)return;if(!window.PORTAIL_READY||typeof S==='undefined'||!S.onb||document.getElementById('relNote')||document.getElementById('updBar')){setTimeout(w,500);return}
+  if(!QI[P]&&!w.ch&&typeof ensureX==='function'){w.ch=1;const mid=P.slice(0,P.lastIndexOf('.')),L=[mid,'plus-'+mid,'plusnat-'+mid].filter(k=>typeof needX==='function'&&needX(k)).map(k=>ensureX(k));
+   if(L.length){Promise.all(L).catch(()=>{}).then(()=>setTimeout(w,400));return}}
+  const q=QI[P];try{sessionStorage.removeItem('ri_lienq')}catch(e){}
+  if(!q){if(typeof toast==='function')toast(Tx('lienq.x','Cette question n’existe plus dans cette version de l’appli.'));return}
+  try{if(RIC.track)RIC.track('lien_question',{qid:P})}catch(e){}
+  startFil(q.m,[P],Tx('lienq.t','📌 Question partagée'),'chap')})()})();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

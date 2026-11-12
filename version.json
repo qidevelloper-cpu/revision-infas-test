@@ -1,7 +1,7 @@
 {
- "v": "70a8fc73e2",
- "date": "2026-10-25",
- "sig": "8c5ee4034bf9ac90f183c97fc3a8adb2218d9f5d",
+ "v": "7b8f185f30",
+ "date": "2026-11-12",
+ "sig": "3f29e828893f86f8c8df1a538520b775573188e6",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
@@ -111,8 +111,8 @@
  },
  "hist": [
   {
-   "v": "70a8fc73e2",
-   "date": "2026-10-25",
+   "v": "7b8f185f30",
+   "date": "2026-11-12",
    "notes": [
     {
      "t": "Nouvelle mise à jour"
