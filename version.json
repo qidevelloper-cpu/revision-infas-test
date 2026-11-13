@@ -1,10 +1,10 @@
 {
- "v": "1bc3379100",
+ "v": "8b217fb890",
  "date": "2026-11-13",
- "sig": "88e77f50391394edd943eaa39b0945cc362a1770",
+ "sig": "03864c7d07c3b787b35d2397895d2f3b3807d6df",
  "notes": [
   {
-   "t": "Nouvelle mise à jour"
+   "t": "Nouveau : tableau d’honneur des étudiants qui améliorent l’appli 🏅"
   }
  ],
  "mats": {
@@ -111,11 +111,11 @@
  },
  "hist": [
   {
-   "v": "1bc3379100",
+   "v": "8b217fb890",
    "date": "2026-11-13",
    "notes": [
     {
-     "t": "Nouvelle mise à jour"
+     "t": "Nouveau : tableau d’honneur des étudiants qui améliorent l’appli 🏅"
     }
    ]
   },
