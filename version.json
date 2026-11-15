@@ -1,7 +1,7 @@
 {
- "v": "3a75444075",
- "date": "2026-11-14",
- "sig": "0e30e12e5f1a2dfade4f81f73de1ff99e6179ea9",
+ "v": "04911e9463",
+ "date": "2026-11-15",
+ "sig": "89570f7ff164febb69db489c70238a570456ef3a",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
@@ -115,8 +115,8 @@
  },
  "hist": [
   {
-   "v": "3a75444075",
-   "date": "2026-11-14",
+   "v": "04911e9463",
+   "date": "2026-11-15",
    "notes": [
     {
      "t": "Nouvelle mise à jour"

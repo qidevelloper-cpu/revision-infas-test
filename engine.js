@@ -2870,6 +2870,13 @@ function sujPrefixe(mid){const m=MATI[mid];return(m&&m.sujPrefixe)||SUJ_PREFIXE[
    else if(q.t==='vf'){x.options=[{letter:'A',text:'Vrai'},{letter:'B',text:'Faux'}];x.mode='mcq';x.multi=false;x.answerLetters=[q.v?'A':'B'];x.answer=q.v?'A. Vrai':'B. Faux'}
    else if(q.t==='open'){x.mode='open';x.options=[];x.answerLetters=[];x.answer=q.r||x.answer}})));
   /* images ajoutées à l'explication depuis le tableau de bord : placées sous l'explication affichée */
+  /* questions désactivées / mises de côté et sujets « en correction » : retirés des écrans de l'appli d'origine (pas dans l'éditeur) */
+  try{const SO=new Set(typeof P.riSujOffIds==='function'?P.riSujOffIds(a.m):[]),cq=typeof P.riQuestionCachee==='function'?P.riQuestionCachee:null;
+   if(SO.size||cq)(Q.antennes||[]).forEach(A=>{(A.sujets||[]).forEach(s=>{const Lq=s.questions||[];if(!Lq.length)return;let nOff=0;
+     const garde=Lq.filter(x=>{const i=P.cleQuestion(a,x.id);if(i==null)return true;const id=a.m+'.'+i;if(SO.has(id)){nOff++;return true}return !(cq&&cq(id))});
+     if(nOff&&nOff>=Math.ceil(Lq.length/2))s.questions=[];else s.questions=garde;if(typeof s.count==='number')s.count=s.questions.length});
+    A.sujets=(A.sujets||[]).filter(s=>(s.questions||[]).length);if(typeof A.count==='number')A.count=A.sujets.reduce((t,s)=>t+(s.questions||[]).length,0)});
+   Q.antennes=(Q.antennes||[]).filter(A=>(A.sujets||[]).length)}catch(e){}
   if(XM.length){const go=()=>{document.querySelectorAll('.fb-explain:not([data-xi])').forEach(el=>{el.setAttribute('data-xi','1');const t=el.textContent.replace(/\s+/g,' ').trim();const m=XM.find(z=>z[0]&&t.endsWith(z[0]));if(!m)return;
     el.insertAdjacentHTML('beforeend',m[1].map(u=>'<a class="ri-xi" href="'+u+'" target="_blank" rel="noopener" style="display:block;margin-top:8px"><img loading="lazy" decoding="async" src="'+u+'" alt="Image de l’explication" loading="lazy" style="max-width:100%;height:auto;border-radius:10px"></a>').join(''))})};
    new MutationObserver(go).observe(document.documentElement,{childList:true,subtree:true})}}catch(e){}}
@@ -3935,8 +3942,18 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
 (function(){
  if(typeof window.riPropager==='function'){const _p=window.riPropager;window.riPropager=function(){const o=_p.apply(this,arguments);if(o&&typeof o==='object')delete o.off;return o}}
  const cache=()=>!(typeof EDITMODE!=='undefined'&&EDITMODE)&&!window.__RI_LECTURE;
- const _ac=applyContent;applyContent=function(){const r=_ac.apply(this,arguments);try{if(cache())Object.keys(QBM).forEach(m=>{const L=QBM[m];if(L&&L.some(q=>q&&q.off))QBM[m]=L.filter(q=>!(q&&q.off))})}catch(e){}return r};
+ /* désactivation de secours : questions signalées par au moins N élèves différents (supabase/signalements/2_mise_de_cote.sql) */
+ const MK='ri_mise';let MISE=new Set();try{MISE=new Set(JSON.parse(localStorage.getItem(MK)||'[]'))}catch(e){}
+ const cachee=q=>!!(q&&(q.off||MISE.has(q.id)));
+ const _ac=applyContent;applyContent=function(){const r=_ac.apply(this,arguments);try{if(cache())Object.keys(QBM).forEach(m=>{const L=QBM[m];if(L&&L.some(cachee))QBM[m]=L.filter(q=>!cachee(q))})}catch(e){}return r};
  window.riQuestionOff=id=>!!(QI[id]&&QI[id].off);
+ window.riQuestionCachee=id=>cache()&&cachee(QI[id]||{id});
+ let derM=0;async function mises(force){try{if(typeof RIC==='undefined'||!RIC.url||!RIC.key||!navigator.onLine||!cache()||(RIC.off&&RIC.off()))return;const t=Date.now();if(!force&&t-derM<10*60e3)return;derM=t;
+  const r=await fetch(RIC.url+'/rest/v1/rpc/questions_mises_de_cote',{method:'POST',headers:{apikey:RIC.key,'Content-Type':'application/json'},body:'{}'});if(!r.ok)return;const j=await r.json();
+  const L=j&&Array.isArray(j.qids)?j.qids.filter(x=>typeof x==='string'):null;if(!L)return;const avant=[...MISE].sort().join('|');MISE=new Set(L);try{localStorage.setItem(MK,JSON.stringify(L))}catch(e){}
+  if([...MISE].sort().join('|')!==avant){try{applyContent()}catch(e){}if(typeof render==='function')try{render()}catch(e){}}}catch(e){}}
+ window.riMises={charger:mises,liste:()=>[...MISE]};
+ setTimeout(()=>mises(true),3000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>mises(false),2000)});
 })();
 /* ======================= SUIVI DE L'ACTIVITÉ (tableau de bord › Élèves) =======================
    Temps passé par rubrique (« vue|matière » : cours, sujets, flashcards, applis…) et questions répondues par matière,
@@ -4009,5 +4026,22 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
   const s=(L||[]).find(x=>String(x.id)===String(P));if(s)lancer(s);else if(n<4)charger(true).then(()=>setTimeout(w,800));})()}
  setTimeout(()=>charger(true),5000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>charger(false),1500)});
+})();
+/* ======================= SUJET DÉSACTIVÉ « EN CORRECTION » (tableau de bord › Signalements / Questions) =======================
+   Correction « suj:<1re question du sujet> » avec {off:1} : le sujet reste à sa place (numéros inchangés) mais il est grisé
+   « 🛠️ En correction » et ne se lance plus, sur le site élèves et le site test. L'éditeur et le tableau de bord le voient normalement. */
+(function(){let C=null,CT=0;
+ const offs=()=>{if(C&&Date.now()-CT<1500)return C;const T={};const add=L=>{(Array.isArray(L)?L:[]).forEach(c=>{if(c&&typeof c.qid==='string'&&c.qid.slice(0,4)==='suj:'&&c.c&&c.c.off)T[c.qid.slice(4)]=1})};
+  try{if(window.riCorrections)add(riCorrections.liste())}catch(e){}try{add(window.__riEdCorr)}catch(e){}C=T;CT=Date.now();return T};
+ const libre=()=>(typeof EDITMODE!=='undefined'&&EDITMODE)||!!window.__RI_LECTURE;
+ window.riSujOff=function(mid,k){try{const L=sujets(mid)[k],f=L&&L[0];return !!(f&&offs()[f])}catch(e){return false}};
+ /* toutes les questions des sujets désactivés d'un cours (pour l'écran de l'appli d'origine) */
+ window.riSujOffIds=function(mid){if(libre())return[];const O=offs(),R=[];try{if(Object.keys(O).length)sujets(mid).forEach(L=>{if(L&&L[0]&&O[L[0]])R.push(...L)})}catch(e){}return R};
+ const _s=startSujet;startSujet=function(mid,k){if(!libre()&&riSujOff(mid,k)){toast(Tx('suj.off','🛠️ Ce sujet est en cours de correction : il revient très bientôt.'),4000);return}return _s.apply(this,arguments)};
+ function marquer(){if(libre())return;const O=offs();if(!Object.keys(O).length)return;const vus={};
+  document.querySelectorAll('[onclick^="startSujet("]').forEach(el=>{const m=/^startSujet\('([^']*)',\s*(\d+)\)/.exec(el.getAttribute('onclick')||'');if(!m)return;const mid=m[1].replace(/\\'/g,"'"),k=+m[2];
+   if(!riSujOff(mid,k))return;el.classList.add('ri-sujoff');const key=mid+'|'+k;if(vus[key]||el.querySelector('.ri-sujoff-b'))return;vus[key]=1;
+   const b=document.createElement('span');b.className='ri-sujoff-b';b.textContent=Tx('suj.offb','🛠️ En correction');el.appendChild(b)})}
+ const _r=render;render=function(){const x=_r.apply(this,arguments);try{marquer()}catch(e){}return x};
 })();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
