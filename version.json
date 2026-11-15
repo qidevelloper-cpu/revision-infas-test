@@ -1,14 +1,10 @@
 {
- "v": "04911e9463",
+ "v": "28b9e8ccce",
  "date": "2026-11-15",
- "sig": "89570f7ff164febb69db489c70238a570456ef3a",
+ "sig": "d186a7d37d71374e9dac3c3cd7b76f18b1c98f66",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
-  },
-  {
-   "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
-   "m": "xmvkq4zed"
   }
  ],
  "mats": {
@@ -115,6 +111,15 @@
  },
  "hist": [
   {
+   "v": "28b9e8ccce",
+   "date": "2026-11-15",
+   "notes": [
+    {
+     "t": "Nouvelle mise à jour"
+    }
+   ]
+  },
+  {
    "v": "04911e9463",
    "date": "2026-11-15",
    "notes": [
@@ -208,15 +213,6 @@
   },
   {
    "v": "73531e6db8",
-   "date": "2026-10-25",
-   "notes": [
-    {
-     "t": "Nouvelle mise à jour"
-    }
-   ]
-  },
-  {
-   "v": "d647dfda2f",
    "date": "2026-10-25",
    "notes": [
     {
