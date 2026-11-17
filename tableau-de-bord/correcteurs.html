@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Correcteurs Révision INFAS</title>
+<meta name="robots" content="noindex">
+<link rel="manifest" href="correcteurs.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#6C3BF5">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* même apparence que le tableau de bord (couleurs, polices, cartes, boutons) */
+:root{
+  --paper:#F5F4FB; --card:#FFFFFF; --ink:#1F1A3D; --muted:#6E6889; --line:#E9E6F4; --soft:#F1EEFB;
+  --violet:#6C3BF5; --violet-ink:#4A22C9; --teal:#17B3A3; --amber:#E89A2C; --red:#E04848; --green:#1E9E6A;
+  --shadow:0 1px 2px rgba(31,26,61,.04),0 8px 24px -12px rgba(31,26,61,.12);
+  --r-lg:22px; --r-md:14px;
+  --display:"Bricolage Grotesque",ui-rounded,system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+:root[data-theme="dark"]{
+  --paper:#13111F; --card:#1C1930; --ink:#EEEAFB; --muted:#A39DBD; --line:#2C2846; --soft:#25213C;
+  --violet:#8F6BFF; --violet-ink:#B9A2FF;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px -12px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--violet);outline-offset:2px;border-radius:6px}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;align-items:center;gap:10px}
+.brand{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.logo{width:38px;height:38px;border-radius:12px;background:var(--violet);display:grid;place-items:center;color:#fff;flex:none}
+.brand b{font-family:var(--display);font-size:17px;line-height:1.1;display:block}
+.brand small{color:var(--muted);font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.iconbtn{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;flex:none;padding:0}
+.iconbtn svg{width:19px;height:19px}
+main{max-width:760px;margin:0 auto;padding:16px 16px 90px}
+.card{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:16px;margin-bottom:14px;min-width:0}
+.muted{color:var(--muted)}.small{font-size:13.5px}
+h1.titre{font-family:var(--display);font-size:24px;line-height:1.15;margin:0;font-weight:700}
+h2{font-family:var(--display);font-size:18px;line-height:1.3;margin:0 0 6px}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 14px;min-height:42px;font-weight:600;font-size:14.5px;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--violet);border-color:var(--violet);color:#fff}
+.btn.pri:hover{background:var(--violet-ink)}
+.btn.sm{padding:5px 10px;min-height:34px;font-size:13px;border-radius:10px}
+.btn:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.col{display:flex;flex-direction:column;gap:10px}
+.field{width:100%;font-size:16px;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--paper)}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:2px 9px;font-size:12.5px;font-weight:600;background:var(--soft);color:var(--violet-ink)}
+.pill.amber{background:color-mix(in srgb,var(--amber) 16%,transparent);color:#b06d00}
+.pill.red{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto}
+.tabs .btn{white-space:nowrap}.tabs .on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+:root[data-theme="dark"] .tabs .on{background:var(--violet);border-color:var(--violet);color:#fff}
+ol.opts{margin:8px 0 0;padding-left:22px}ol.opts li{margin:3px 0}
+.ok{color:var(--green);font-weight:700}
+.sig{border-top:1px solid var(--line);padding:8px 0}
+.ph img{max-width:100%;max-height:380px;border-radius:12px;border:1px solid var(--line);display:block;margin-top:6px}
+.choice{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:12px;margin:6px 0;cursor:pointer;background:var(--paper)}
+.choice input{margin-top:4px;width:20px;height:20px;flex:none;accent-color:var(--violet)}
+.msg{border-radius:12px;padding:10px 12px;font-size:14px;margin:10px 0;background:var(--soft)}
+.msg.bad{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(120px);background:var(--ink);color:var(--paper);padding:11px 16px;border-radius:12px;transition:transform .25s;max-width:calc(100% - 32px);z-index:9}
+#toast.on{transform:translateX(-50%) translateY(0)}
+details summary{cursor:pointer;color:var(--muted);font-size:14px}
+a{color:var(--violet-ink)}
+#tiroir{position:fixed;inset:0;z-index:8;display:none}#tiroir.on{display:block}
+#tiroir .fond{position:absolute;inset:0;background:rgba(19,17,31,.4)}
+#tiroir nav{position:absolute;left:0;top:0;bottom:0;width:min(86vw,320px);background:var(--card);padding:18px 14px;overflow:auto;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px}
+.navlabel{color:var(--muted);font-size:12.5px;padding:12px 12px 4px}
+.nav{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:12px;border:0;background:transparent;text-align:left;width:100%;font-weight:500;color:var(--ink)}
+.nav:hover{background:var(--soft)}
+.nav.on{background:var(--ink);color:var(--paper)}
+:root[data-theme="dark"] .nav.on{background:var(--violet);color:#fff}
+.nav .ico{font-size:18px;width:22px;text-align:center;flex:none}
+.nav .count{margin-left:auto;font-size:12px;background:var(--soft);color:var(--muted);border-radius:99px;padding:1px 8px;font-weight:600}
+.nav.on .count{background:rgba(255,255,255,.18);color:inherit}
+.nav .d{display:block;font-size:12px;opacity:.7;font-weight:400}
+#tiroir nav .brand{flex:none}
+.grp{border:1.5px solid #fcd34d;background:#fffbeb;border-radius:var(--r-lg);padding:10px;margin-bottom:14px}
+:root[data-theme="dark"] .grp{background:#2a2414;border-color:#6b5414}
+.grp .card{margin-bottom:8px}
+.suj{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;padding:0;min-height:0}
+</style>
+</head>
+<body>
+<header><button class="iconbtn" id="menu" aria-label="Rubriques" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 19V6a2 2 0 0 1 2-2h9l5 5v10a2 2 0 0 1-2 2H6"/><path d="M9 13h6M12 10v6"/></svg></div>
+    <div style="min-width:0"><b>Révision INFAS</b><small>Espace correcteurs<span id="qui"></span></small></div></div>
+  <button class="iconbtn" id="theme" aria-label="Mode sombre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+  <button class="btn sm" id="out" hidden>Quitter</button></header>
+<main id="v"><div class="card"><p class="muted" style="margin:0">Chargement…</p></div></main>
+<div id="tiroir" aria-hidden="true"><div class="fond"></div><nav id="nav" aria-label="Rubriques"></nav></div>
+<div id="toast" role="status"></div>
+<script>
+/* Page des correcteurs (téléphone). Données : supabase/correcteurs/1_correcteurs.sql (dossiers_liste, donner_avis, signal_qid_fixer).
+   Aucun secret : seule la clé publique Supabase (la même que dans l'appli des élèves) figure ici. */
+try{ const t = localStorage.getItem('rinfas_theme'); if(t) document.documentElement.dataset.theme = t; }catch(e){}
+document.getElementById('theme').onclick = ()=>{ const r = document.documentElement, d = r.dataset.theme==='dark' ? 'light' : 'dark'; r.dataset.theme = d; try{ localStorage.setItem('rinfas_theme', d); }catch(e){} };
+const SBC = {url:'https://fsdcxvszvyjquzdjanpo.supabase.co', key:'sb_publishable_dZGt5cfkEDeH-z5uoUa8kA_UXGQFkzi'};
+const SITE = window.__QSITE || (/[?&]site=test\b/.test(location.search) ? 'https://qidevelloper-cpu.github.io/revision-infas-test/' : 'https://qidevelloper-cpu.github.io/daniel-noufe-revision-infas/');
+const QL = 'ABCDEFGH', $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const quand = iso => { try{ return new Date(iso).toLocaleString('fr-FR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}); }catch(e){ return ''; } };
+function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(()=>e.classList.remove('on'), 2800); }
+let SB = null, MOI = null, D = {L:[], req:3}, ONG = 'afaire', OUV = null, W = null, QETAT = '', FIX = false;
+let RUB = (/[?&]r=(desactivees|suspects|doublons|sujets)\b/.exec(location.search)||[])[1] || 'signales', SUJ = null, SUS = null, DBL = null, AVQ = {}, LIM = 15;
+const PH = {};
+
+function charger(src){ return new Promise((ok, ko)=>{ const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = ()=>ko(new Error('Pas de connexion internet.')); document.head.appendChild(s); }); }
+async function demarrer(){
+  try{ if(!window.supabase) await charger('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js'); SB = window.supabase.createClient(SBC.url, SBC.key); }
+  catch(e){ return vue(`<div class="card"><p class="msg bad">${esc(e.message)}</p><button class="btn" onclick="location.reload()">Réessayer</button></div>`); }
+  let session = null; try{ ({data:{session}} = await SB.auth.getSession()); }catch(e){ return erreur(e, demarrer); } if(!session) return connexion();
+  entrer();
+}
+function vue(h){ $('#v').innerHTML = h; }
+/* réseau mobile instable : chaque appel à Supabase est retenté (jusqu'à 4 fois) avant d'afficher une erreur */
+const reseau = e => /failed to fetch|network|load failed|fetch/i.test(String((e && e.message) || e || ''));
+async function rpc(fn, args){ let r = null;
+  for(let i = 0; i < 4; i++){ try{ r = await SB.rpc(fn, args); }catch(e){ r = {error:e}; }
+    if(!r.error || !reseau(r.error)) return r; await new Promise(ok=>setTimeout(ok, 1500*(i+1))); }
+  return r; }
+function erreur(e, apres){ const net = reseau(e);
+  vue(`<div class="card"><p class="msg bad">${net ? '📶 Connexion internet trop faible ou coupée : la page n’a pas pu joindre le serveur.' : esc(e && e.message || e)}</p>
+    ${net ? '<p class="muted small">Vérifie ta connexion (données mobiles ou Wi-Fi), puis touche « Réessayer ».</p>' : ''}<button class="btn pri" id="reessai">Réessayer</button></div>`);
+  $('#reessai').onclick = apres || (()=>location.reload()); }
+function connexion(err){
+  $('#out').hidden = true; $('#qui').textContent = '';
+  vue(`<div class="card"><h2>Connexion</h2><p class="muted small" style="margin:0 0 10px">Utilise l’e-mail et le mot de passe de ton compte Révision INFAS (celui de l’appli). Daniel doit d’abord avoir ajouté ton e-mail à l’équipe.</p>
+    <form id="lf" class="col" autocomplete="on"><input class="field" id="le" type="email" placeholder="E-mail" autocomplete="username" required><input class="field" id="lp" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
+    <button class="btn pri" type="submit">Se connecter</button></form><div id="lm">${err?`<p class="msg bad">${esc(err)}</p>`:''}</div></div>`);
+  $('#lf').onsubmit = async e=>{ e.preventDefault(); $('#lm').innerHTML = '<p class="msg">Connexion…</p>';
+    const {error} = await SB.auth.signInWithPassword({email:$('#le').value.trim(), password:$('#lp').value});
+    if(error) return $('#lm').innerHTML = `<p class="msg bad">${/invalid/i.test(error.message)?'E-mail ou mot de passe incorrect.':esc(error.message)}</p>`;
+    entrer(); };
+}
+$('#out').onclick = async ()=>{ try{ await SB.auth.signOut(); }catch(e){} location.reload(); };
+async function entrer(){
+  vue('<div class="card"><p class="muted" style="margin:0">Chargement des dossiers…</p></div>');
+  const {data, error} = await rpc('correcteur_moi');
+  if(error) return /correcteur_moi|function|schema/i.test(error.message) ? vue('<div class="card"><p class="msg bad">L’espace des correcteurs n’est pas encore activé.</p></div>') : erreur(error, entrer);
+  MOI = data; $('#out').hidden = false; $('#menu').hidden = !(MOI.correcteur || MOI.admin); $('#qui').textContent = ' · ' + (MOI.nom || MOI.email);
+  if(!MOI.correcteur && !MOI.admin) return vue(`<div class="card"><h2>Compte pas encore dans l’équipe</h2><p>Le compte <b>${esc(MOI.email)}</b> est connecté, mais il n’est pas (ou plus) dans l’équipe de correction. Demande à Daniel de l’ajouter, puis recharge cette page.</p><button class="btn" onclick="location.reload()">Recharger</button></div>`);
+  chargerAppli(); await dossiers(); if(ALERTE.perm==='granted') abonner();
+}
+async function dossiers(){
+  const {data, error} = await rpc('dossiers_liste'); if(error){ if(D.L.length && reseau(error)) return toast('📶 Connexion faible : liste pas actualisée.'); return erreur(error, dossiers); }
+  D = {L:data.dossiers||[], req:data.avis_requis||3}; FIX = false; rendre(); verifierNumeros(); alerter();
+}
+/* l'appli des élèves, chargée en arrière-plan : texte, propositions et réponse actuelle de chaque question */
+function chargerAppli(){ if(QETAT) return; QETAT = 'charge';
+  const f = document.createElement('iframe'); f.setAttribute('aria-hidden','true'); f.tabIndex = -1; f.style.cssText = 'position:fixed;left:-9999px;top:0;width:400px;height:800px;border:0;visibility:hidden';
+  f.src = SITE + (SITE.includes('?')?'&':'?') + 'lecture=1'; document.body.appendChild(f); const t0 = Date.now();
+  const tick = ()=>{ let w = null; try{ w = f.contentWindow; void w.document; }catch(e){ QETAT = 'err'; rendre(); return; }
+    try{ if(w && w.PORTAIL_READY && w.eval('typeof QI')==='object'){ W = w; QETAT = 'ok'; chargerMatieres().then(()=>{ rendre(); verifierNumeros(); if(RUB==='desactivees') ouvrirRubrique(); }); return; } }catch(e){}
+    if(Date.now()-t0 > 120e3){ QETAT = 'err'; rendre(); return; } setTimeout(tick, 500); };
+  setTimeout(tick, 800); }
+async function chargerMatieres(L){ const M = [...new Set((L || D.L.map(d=>d.mat)).filter(Boolean))]; if(!W || !M.length) return;
+  try{ await W.eval(`(async()=>{let ch=false;for(const m of ${JSON.stringify(M)})for(const k of [m,'plus-'+m,'plusnat-'+m]){try{if(typeof needX==='function'&&needX(k)){await ensureX(k);ch=true}}catch(e){}}if(ch)try{applyContent()}catch(e){}})()`); }catch(e){} }
+const question = qid => { try{ const q = W && W.eval('QI['+JSON.stringify(qid)+']'); return q ? JSON.parse(JSON.stringify(q)) : null; }catch(e){ return null; } };
+const repTxt = (p, q) => { if(!p) return ''; if(p.v!=null) return p.v ? 'Vrai' : 'Faux'; const o = (q && q.o) || [], L = Array.isArray(p.am) ? p.am : p.a!=null ? [p.a] : []; return L.map(i=>QL[i]+(o[i]?'. '+o[i]:'')).join(' ; '); };
+const repActuelle = q => !q ? '' : q.t==='vf' ? (q.v?'Vrai':'Faux') : q.t==='qcm' ? repTxt(Array.isArray(q.am)&&q.am.length?{am:q.am}:{a:q.a}, q) : (q.r||'');
+/* même recherche que le tableau de bord : un téléphone resté sur une ancienne version peut avoir envoyé le n° d'une autre question */
+function sigTrouver(L){
+  const nz = s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+  const txt = q=>nz(String((q.s?q.s+' — ':'')+q.q).slice(0,2000));
+  return (async()=>{ let IX = null; const out = {};
+    L.forEach(([id,qid,mat,t])=>{ const T = nz(t), q = QI[qid]; if(!T){ out[id] = ''; return; } if(q && txt(q)===T){ out[id] = ''; return; }
+      if(!IX){ IX = {}; Object.keys(QI).forEach(k=>{ const x = QI[k]; if(!x || !x.q) return; const s = txt(x); (IX[s] = IX[s] || []).push(k); }); }
+      const c = IX[T] || []; out[id] = c.find(k=>QI[k].m===mat) || c[0] || (q ? '?' : ''); });
+    return out; })();
+}
+async function verifierNumeros(){ if(FIX || QETAT!=='ok' || !D.L.length) return; FIX = true;
+  const L = []; D.L.forEach(d=>d.signalements.forEach(s=>{ if(s.question && s.qid===d.qid) L.push([s.id, s.qid, d.mat, s.question]); })); if(!L.length) return;
+  try{ const out = await W.eval('('+sigTrouver.toString()+')('+JSON.stringify(L)+')') || {}, fx = {};
+    L.forEach(([id, qid])=>{ const v = out[id]; if(v && v!=='?' && v!==qid) fx[id] = v; });
+    if(Object.keys(fx).length){ const {data} = await SB.rpc('signal_qid_fixer', {p:fx}); if(data && data.n) dossiers(); } }catch(e){} }
+
+const monAvis = d => (d.avis||[]).find(a=>a.moi);
+const lettres = k => k==='V' ? 'Vrai' : k==='F' ? 'Faux' : String(k||'').split('').join('+');
+function groupes(d){ const G = {}; (d.avis||[]).filter(a=>a.decision!=='passe').forEach(a=>{ const g = G[a.signature] = G[a.signature] || {decision:a.decision, prop:a.prop||{}, noms:[]}; g.noms.push(a.moi?'toi':a.nom); }); return Object.values(G).sort((x,y)=>y.noms.length-x.noms.length); }
+/* ---------- rubriques (menu ☰ en haut à gauche) ---------- */
+const RUBS = [
+  ['signales', '⚑', 'Questions signalées', 'Les élèves ont signalé une erreur.'],
+  ['sujets', '🎯', 'Sujets les plus signalés', 'Les sujets d’où viennent le plus de signalements.'],
+  ['suspects', '🔎', 'Corrigés à vérifier', 'La plupart des élèves choisissent une autre réponse que le corrigé.'],
+  ['doublons', '🧭', 'Questions identiques, réponses différentes', 'Même énoncé, mêmes propositions, mais pas la même bonne réponse.'],
+  ['desactivees', '🙈', 'Questions désactivées', 'Retirées de l’appli des élèves : vérifie-les pour qu’on les corrige et les remette.']];
+const desactivees = () => { if(QETAT!=='ok') return []; try{ return W.eval('Object.keys(QI).filter(id=>QI[id]&&QI[id].off)') || []; }catch(e){ return []; } };
+const sansAvis = L => L.filter(d=>!monAvis(d)).length;
+function compte(r){ if(r==='signales') return sansAvis(D.L); if(r==='sujets') return sujetsSignales().length; if(r==='suspects') return SUS ? sansAvis(listeSuspects()) : '';
+  if(r==='doublons') return DBL ? DBL.length : ''; if(r==='desactivees') return QETAT==='ok' ? desactivees().length : ''; return ''; }
+function menu(on){ const t = $('#tiroir'); t.classList.toggle('on', on); t.setAttribute('aria-hidden', on?'false':'true'); if(!on) return;
+  $('#nav').innerHTML = '<div class="brand" style="padding:2px 8px 10px"><div class="logo">✓</div><div><b>Correction</b><small>Rubriques</small></div></div><div class="navlabel">À corriger</div>'
+    + RUBS.map(([k,i,n,d])=>`<button class="nav ${RUB===k?'on':''}" data-rub="${k}"><span class="ico">${i}</span><span>${n}<span class="d">${d}</span></span>${compte(k)!==''?`<span class="count">${compte(k)}</span>`:''}</button>`).join('')
+    + `<p class="muted small" style="margin:auto 8px 0;padding-top:14px">Dans chaque rubrique, donne ton avis question par question avec ton cours.</p>`;
+  document.querySelectorAll('[data-rub]').forEach(b=>b.onclick=()=>{ RUB = b.dataset.rub; SUJ = null; OUV = null; LIM = 15; menu(false); ouvrirRubrique(); }); }
+$('#menu').onclick = ()=>menu(true); $('#tiroir .fond').onclick = ()=>menu(false);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') menu(false); });
+async function ouvrirRubrique(){ rendre(); window.scrollTo({top:0});
+  if(RUB==='suspects' && SUS===null) await chargerSuspects();
+  if(RUB==='doublons' && DBL===null) await chargerDoublons();
+  if(RUB==='desactivees' && QETAT==='ok'){ const L = desactivees(); await chargerMatieres(L.map(x=>String(x).split('.')[0])); await chargerAvis(L); rendre(); } }
+async function chargerSuspects(){ const {data, error} = await rpc('corriges_suspects_equipe', {p_min:10, p_part:0.6});
+  SUS = error ? [] : (data||[]); if(error) toast('Corrigés à vérifier : '+error.message);
+  await chargerMatieres(SUS.map(x=>String(x.qid).split('.')[0])); await chargerAvis(SUS.map(x=>x.qid)); rendre(); }
+async function chargerDoublons(){ if(QETAT!=='ok'){ DBL = null; return; } rendre();
+  await chargerMatieres(W.eval('MAT.map(m=>m.id)')||[]);
+  DBL = W.eval(`(()=>{if(typeof riDoublons!=='function')return [];const n=x=>String(x==null?'':x).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+    const cle=y=>y.t==='vf'?'v'+(y.v?1:0):y.t==='qcm'?(Array.isArray(y.am)&&y.am.length?y.am:[y.a]).map(i=>n((y.o||[])[i])).sort().join('|'):n(y.r);
+    const vu={},R=[];for(const id in QI){if(vu[id])continue;const d=riDoublons(id);if(!d.length)continue;d.forEach(x=>vu[x]=1);const G=[id].concat(d);if(new Set(G.map(x=>cle(QI[x]))).size>1)R.push(G)}return R})()`) || [];
+  await chargerAvis([].concat(...DBL)); rendre(); }
+async function chargerAvis(L){ if(!L.length) return; const {data} = await rpc('avis_questions', {p_qids:[...new Set(L)].slice(0,400)}); AVQ = Object.assign(AVQ, data||{}); }
+/* question hors dossier : on l'affiche comme un dossier sans signalement (avis déjà donnés compris) */
+function pseudo(qid, extra){ const d = D.L.find(x=>x.qid===qid); if(d) return Object.assign({}, d, extra||{});
+  return Object.assign({qid, mat:String(qid).split('.')[0], nb:0, eleves:0, photos:0, mise:false, signalements:[], avis:AVQ[qid]||[], choix:null}, extra||{}); }
+function listeSuspects(){ return (SUS||[]).map(x=>pseudo(x.qid, {choix:x.dist, suspect:x})); }
+function sujetsSignales(){ if(QETAT!=='ok') return []; const G = {};
+  D.L.filter(d=>d.origine!=='avis').forEach(d=>{ let k = null; try{ k = W.eval(`(()=>{const m=${JSON.stringify(d.mat)};const L=typeof sujets==='function'?sujets(m):[];const i=L.findIndex(x=>x.includes(${JSON.stringify(d.qid)}));return i<0?null:[m,i,typeof sujTitre==='function'?sujTitre(m,i):'Sujet '+(i+1)]})()`); }catch(e){}
+    if(!k) return; const id = k[0]+'#'+k[1], g = G[id] = G[id] || {id, mat:k[0], titre:k[2], L:[], el:0}; g.L.push(d); g.el += d.eleves||0; });
+  return Object.values(G).sort((a,b)=>b.L.length-a.L.length || b.el-a.el); }
+const nomMat = m => { try{ return (W && W.eval('(MAT.find(x=>x.id==='+JSON.stringify(m)+')||{}).title||""')) || m; }catch(e){ return m; } };
+function contenu(){
+  const vide = t => `<div class="card"><p class="muted" style="margin:0">${t}</p></div>`;
+  if(RUB==='sujets'){
+    if(QETAT!=='ok') return vide('⏳ Chargement des sujets de l’appli…');
+    const S = sujetsSignales();
+    if(SUJ){ const g = S.find(x=>x.id===SUJ); if(!g){ SUJ = null; return contenu(); }
+      return `<button class="btn sm" id="sujret" style="margin-bottom:10px">← Tous les sujets</button><div class="card"><b>${esc(g.titre)}</b><div class="muted small">${esc(nomMat(g.mat))} · ${g.L.length} question${g.L.length>1?'s':''} signalée${g.L.length>1?'s':''} · ${g.el} élève${g.el>1?'s':''}</div></div>` + g.L.map(carte).join(''); }
+    return S.length ? S.map(g=>`<div class="card"><button class="btn suj" data-suj="${esc(g.id)}"><span><b>${esc(g.titre)}</b><br><span class="muted small">${esc(nomMat(g.mat))} · ${g.el} élève${g.el>1?'s':''}</span></span><span class="pill amber">⚑ ${g.L.length} question${g.L.length>1?'s':''}${sansAvis(g.L)?' · '+sansAvis(g.L)+' sans ton avis':''}</span></button></div>`).join('') : vide('Aucun sujet signalé pour l’instant.');
+  }
+  if(RUB==='suspects'){
+    if(SUS===null) return vide('⏳ Chargement…');
+    const L = listeSuspects(); return L.length ? L.slice(0, LIM).map(carte).join('') + plus(L.length) : vide('✅ Aucun corrigé suspect pour l’instant (il faut au moins 10 réponses d’élèves à une question).');
+  }
+  if(RUB==='doublons'){
+    if(QETAT!=='ok' || DBL===null) return vide('⏳ Analyse des questions de l’appli… (peut prendre un moment)');
+    return DBL.length ? '<p class="muted small" style="margin:0 0 10px">Ces questions ont le même énoncé et les mêmes propositions, mais pas la même bonne réponse : l’une est sûrement fausse. Donne ton avis sur celle qui est fausse (ou sur chacune).</p>'
+      + DBL.slice(0, LIM).map(G=>`<div class="grp">${G.map(id=>carte(pseudo(id))).join('')}</div>`).join('') + plus(DBL.length) : vide('✅ Aucune : toutes les questions identiques ont la même réponse.');
+  }
+  if(RUB==='desactivees'){
+    if(QETAT!=='ok') return vide('⏳ Chargement des questions de l’appli…');
+    const L = desactivees();
+    return L.length ? `<div class="row" style="margin:0 0 10px"><button class="btn sm" id="offwa" style="background:#25d366;border-color:#25d366;color:#fff">💬 Partager la liste</button></div>` + L.slice(0, LIM).map(id=>carte(pseudo(id))).join('') + plus(L.length) : vide('✅ Aucune question désactivée pour l’instant.');
+  }
+  const af = D.L.filter(d=>!monAvis(d)), fait = D.L.filter(d=>monAvis(d)), L = ONG==='afaire' ? af : fait;
+  return `<div class="tabs"><button class="btn sm ${ONG==='afaire'?'on':''}" data-ong="afaire">À vérifier · ${af.length}</button><button class="btn sm ${ONG==='fait'?'on':''}" data-ong="fait">Mes avis donnés · ${fait.length}</button></div>`
+    + (L.length ? L.map(carte).join('') : vide(ONG==='afaire'?'🎉 Rien à vérifier pour l’instant. Merci !':'Aucun avis donné pour l’instant.'));
+}
+const plus = n => n > LIM ? `<button class="btn" id="plus" style="width:100%">Voir plus (${n-LIM} de plus)</button>` : '';
+function rendre(){
+  document.title = (sansAvis(D.L) ? '('+sansAvis(D.L)+') ' : '') + 'Correcteurs Révision INFAS';
+  const R = RUBS.find(x=>x[0]===RUB);
+  vue(`${MOI && MOI.admin ? '<p class="msg">Tu es connecté en administrateur : ton avis publie la correction tout de suite.</p>' : ''}
+    <div class="row" style="margin:4px 0 6px;align-items:flex-end"><h1 class="titre" style="flex:1">${R[1]} ${R[2]}</h1><button class="btn sm" id="maj" aria-label="Actualiser">↻</button>${ALERTE.dispo && ALERTE.perm!=='granted' ? `<button class="btn sm" id="alon">🔔 ${ALERTE.perm==='denied'?'Alertes bloquées':'Activer les alertes'}</button>` : ''}</div>
+    <p class="muted small" style="margin:0 0 10px">${R[3]} Vérifie avec ton cours : ${D.req} avis identiques publient la correction ; si les avis diffèrent, Daniel tranche. <a href="#" id="voirmenu">☰ Autres rubriques</a></p>
+    ${QETAT==='charge' ? '<p class="muted small">⏳ Chargement des questions de l’appli…</p>' : QETAT==='err' ? '<p class="msg bad">Impossible de charger l’appli des élèves : les questions s’afficheront avec le texte envoyé par les élèves.</p>' : ''}
+    ${contenu()}`);
+  document.querySelectorAll('[data-ong]').forEach(b=>b.onclick=()=>{ ONG = b.dataset.ong; OUV = null; rendre(); });
+  $('#voirmenu').onclick = e=>{ e.preventDefault(); menu(true); };
+  document.querySelectorAll('[data-suj]').forEach(b=>b.onclick=()=>{ SUJ = b.dataset.suj; OUV = null; rendre(); window.scrollTo({top:0}); });
+  const sr = $('#sujret'); if(sr) sr.onclick = ()=>{ SUJ = null; rendre(); };
+  const pl = $('#plus'); if(pl) pl.onclick = ()=>{ LIM += 15; rendre(); };
+  const ow = $('#offwa'); if(ow) ow.onclick = ()=>{ const L = desactivees(), t = `🙈 Questions désactivées · Révision INFAS (${L.length})\nÀ vérifier avec ton cours :\n\n` + L.slice(0, 25).map((id,i)=>{ const q = question(id); return q ? `${i+1}. [${nomMat(q.m)}] ${String(q.q||'').slice(0,160)}` : ''; }).filter(Boolean).join('\n') + (L.length>25 ? `\n… et ${L.length-25} autres.` : '') + `\n\n👉 ${location.href.split(/[?#]/)[0]}?r=desactivees`;
+    window.open('https://wa.me/?text='+encodeURIComponent(t), '_blank', 'noopener'); };
+  $('#maj').onclick = async ()=>{ if(RUB==='suspects') SUS = null; if(RUB==='doublons') DBL = null; await dossiers(); ouvrirRubrique(); };
+  const al = $('#alon'); if(al) al.onclick = activerAlertes;
+  document.querySelectorAll('[data-juste]').forEach(b=>b.onclick=()=>envoyer(b.dataset.juste, 'rejet', {}));
+  document.querySelectorAll('[data-passe]').forEach(b=>b.onclick=()=>envoyer(b.dataset.passe, 'passe', {}));
+  document.querySelectorAll('[data-faux]').forEach(b=>b.onclick=()=>{ OUV = b.dataset.faux; rendre(); const c = document.getElementById('f-'+OUV); if(c) c.scrollIntoView({block:'center'}); });
+  document.querySelectorAll('[data-annul]').forEach(b=>b.onclick=()=>{ OUV = null; rendre(); });
+  document.querySelectorAll('[data-prop]').forEach(b=>b.onclick=async ()=>{ const qid = b.dataset.prop, q = question(qid), f = document.getElementById('f-'+qid);
+    const v = [...f.querySelectorAll('[name=r]:checked')].map(x=>+x.value); if(!v.length) return toast('Choisis la bonne réponse.');
+    const p = q && q.t==='vf' ? {v:v[0]} : v.length>1 ? {am:v.sort((a,b)=>a-b)} : {a:v[0]};
+    const x = f.querySelector('[name=x]').value.trim(); if(x) p.x = x; const s = f.querySelector('[name=src]:checked'); if(s && s.value) p.src = s.value;
+    if(p.src){ b.disabled = true; b.textContent = '📷 Envoi de la photo…'; const u = await copiePublique(p.src, qid); if(u) p.srcu = u; else toast('La photo n’a pas pu être copiée : ton avis part sans elle.'); }
+    envoyer(qid, 'juste', p); });
+  document.querySelectorAll('[data-photo]').forEach(async el=>{ const u = await photo(el.dataset.photo); el.innerHTML = u ? `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Photo envoyée par l’élève" loading="lazy"></a>` : '<span class="muted small">📷 Photo indisponible</span>'; });
+}
+/* photo choisie comme source : copiée du stockage privé des signalements vers le stockage PUBLIC « explications »
+   (dossier sources/), le seul que l'appli des élèves affiche sous l'explication */
+async function copiePublique(path, qid){ try{ const u = await photo(path); if(!u) return null; const r = await fetch(u); if(!r.ok) return null; const b0 = await r.blob(), ty = /^image\/(jpeg|png|webp)$/.test(b0.type) ? b0.type : 'image/jpeg', blob = b0.type===ty ? b0 : new Blob([b0], {type:ty});
+    const dest = 'sources/' + String(qid).replace(/[^A-Za-z0-9._-]/g,'_') + '/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + (ty==='image/png'?'.png':ty==='image/webp'?'.webp':'.jpg');
+    const up = await SB.storage.from('explications').upload(dest, blob, {contentType:ty, upsert:false, cacheControl:'31536000'}); if(up.error) return null;
+    const pu = SB.storage.from('explications').getPublicUrl(dest).data.publicUrl;
+    return /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/explications\/sources\/[A-Za-z0-9._\/-]+$/.test(pu) ? pu : null; }catch(e){ return null; } }
+async function photo(p){ if(PH[p] && PH[p].t > Date.now()-50*60e3) return PH[p].u; try{ const {data} = await SB.storage.from('signalements').createSignedUrl(p, 3600); if(data){ PH[p] = {u:data.signedUrl, t:Date.now()}; return data.signedUrl; } }catch(e){} return null; }
+function carte(d){
+  const q = question(d.qid), m = monAvis(d), G = groupes(d), ouvert = OUV===d.qid, ph = d.signalements.filter(s=>s.photo);
+  const choix = d.choix || {}, T = Object.values(choix).reduce((s,n)=>s+n,0);
+  const texte = q ? (q.s ? q.s+' — ' : '') + (q.q||'') : (d.signalements[0]||{}).question || '';
+  return `<div class="card" id="f-${esc(d.qid)}">
+    <div class="row"><b>${esc(nomMat(q ? q.m : d.mat))}</b>${d.origine==='avis'?'<span class="pill">💬 proposée par l’équipe</span>':''}${d.eleves?`<span class="pill">⚑ ${d.eleves} élève${d.eleves>1?'s':''}</span>`:''}${d.suspect?`<span class="pill red">${Math.round(d.suspect.part*100)} % ont choisi ${esc(lettres(d.suspect.top))}</span>`:''}${G.length>1?'<span class="pill amber">avis différents</span>':''}${d.mise?'<span class="pill red">retirée de l’appli en attendant</span>':''}</div>
+    <p style="margin:8px 0 0;white-space:pre-line">${esc(String(texte).slice(0,1500))}</p>
+    ${q && q.t==='qcm' ? `<ol class="opts" type="A">${(q.o||[]).map(o=>`<li>${esc(o)}</li>`).join('')}</ol>` : q && q.t==='vf' ? '<p class="muted small" style="margin:4px 0 0">Vrai ou Faux</p>' : ''}
+    ${q ? `<p style="margin:8px 0 0">Réponse de l’appli : <span class="ok">${esc(repActuelle(q))}</span></p>${q.x?`<details><summary>Explication de l’appli</summary><p class="small" style="white-space:pre-line">${esc(String(q.x).replace(/\[\/?(?:b|i|u|g|tg|p)\]/g,'').slice(0,1500))}</p></details>`:''}` : ''}
+    ${T ? `<p class="small muted" style="margin:6px 0 0">📊 Réponses des élèves : ${Object.entries(choix).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<b>${esc(lettres(k))}</b> ${Math.round(n*100/T)} %`).join(' · ')} <span class="muted">(${T})</span></p>` : ''}
+    ${d.signalements.length ? '' : '<!--'}<details ${ph.length?'open':''} style="margin-top:8px"><summary>Ce que disent les élèves (${d.signalements.length})</summary>${d.signalements.map(s=>`<div class="sig"><span class="muted small">${esc(s.prenom||'Élève')} · ${quand(s.t)}</span><div>${esc(s.message||'')}</div>${s.photo?`<div class="ph" data-photo="${esc(s.photo)}"><span class="muted small">📷 Chargement…</span></div>`:''}</div>`).join('')}</details>${d.signalements.length ? '' : '-->'}
+    ${G.length ? `<div style="margin-top:8px">${G.map(g=>`<p class="small" style="margin:4px 0">${g.decision==='rejet'?'👍 Question juste':'✏️ Bonne réponse : <b>'+esc(repTxt(g.prop, q))+'</b>'} — ${esc(g.noms.join(', '))}${g.prop.x?`<br><span class="muted">« ${esc(g.prop.x)} »</span>`:''}</p>`).join('')}</div>` : ''}
+    ${m ? `<p class="msg small" style="margin-bottom:6px">Ton avis : ${m.decision==='rejet'?'👍 la question est juste':m.decision==='passe'?'⏭️ je ne sais pas':'✏️ '+esc(repTxt(m.prop, q))}. Tu peux le changer.</p>` : ''}
+    ${ouvert ? formulaire(d, q, ph) : `<div class="row" style="margin-top:10px"><button class="btn pri" data-juste="${esc(d.qid)}">👍 La question est juste</button><button class="btn" data-faux="${esc(d.qid)}" ${q && !['qcm','vf'].includes(q.t)?'disabled title="Question ouverte : Daniel la corrige"':''}>✏️ Elle est fausse</button><button class="btn sm" data-passe="${esc(d.qid)}">⏭️ Je ne sais pas</button></div>`}
+  </div>`;
+}
+function formulaire(d, q, ph){
+  if(!q) return '<p class="msg bad">La question n’est pas encore chargée : réessaie dans un instant.</p><button class="btn" data-annul="1">Fermer</button>';
+  const opts = q.t==='vf' ? ['Vrai','Faux'].map((t,i)=>`<label class="choice"><input type="radio" name="r" value="${1-i}"><span>${t}</span></label>`).join('')
+    : (q.o||[]).map((o,i)=>`<label class="choice"><input type="checkbox" name="r" value="${i}"><span><b>${QL[i]}.</b> ${esc(o)}</span></label>`).join('');
+  return `<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px"><h2>Quelle est la bonne réponse ?</h2>${q.t==='qcm'?'<p class="muted small" style="margin:0">Coche toutes les bonnes réponses.</p>':''}${opts}
+    <label class="small muted" for="x-${esc(d.qid)}">Explication courte, d’après ton cours (facultatif)</label><textarea class="field" name="x" id="x-${esc(d.qid)}" rows="3" maxlength="600" placeholder="Ex. : Selon le cours de santé publique (p. 12), …"></textarea>
+    ${ph.length ? `<p class="small" style="margin:10px 0 4px">Photo source (cours) :</p><label class="choice"><input type="radio" name="src" value="" checked><span>Aucune</span></label>${ph.map((s,i)=>`<label class="choice"><input type="radio" name="src" value="${esc(s.photo)}"><span>Photo de ${esc(s.prenom||'l’élève '+(i+1))}</span></label>`).join('')}` : ''}
+    <div class="row" style="margin-top:10px"><button class="btn pri" data-prop="${esc(d.qid)}">Envoyer mon avis</button><button class="btn" data-annul="1">Annuler</button></div></div>`;
+}
+async function envoyer(qid, decision, prop){
+  const {data, error} = await rpc('donner_avis', {p_qid:qid, p_decision:decision, p_prop:prop});
+  if(error) return toast(reseau(error) ? '📶 Connexion trop faible : ton avis n’est pas parti, réessaie.' : 'Erreur : '+error.message); if(!data || !data.ok) return toast('Avis refusé : vérifie ta réponse.');
+  if(RUB==='suspects' || RUB==='doublons') await chargerAvis([qid]);
+  OUV = null; toast(data.etat==='publie' ? '✅ Correction publiée chez tous les élèves. Merci !' : data.etat==='confirme' ? '✅ Question confirmée. Merci !' : decision==='passe' ? 'Noté.' : 'Avis enregistré ('+(data.n||1)+' / '+(data.requis||D.req)+').');
+  dossiers();
+}
+/* ---------- alertes : nouvelles questions à vérifier ----------
+   La page regarde toutes les 2 minutes (et quand on y revient) s'il y a de nouveaux dossiers ; si oui : alerte du téléphone
+   (si autorisée), vibration et compteur dans l'onglet. Fonctionne tant que la page est ouverte (même en arrière-plan). */
+const ALERTE = {dispo:'Notification' in window, perm:('Notification' in window) ? Notification.permission : 'denied', reg:null};
+const VUS_K = 'ri_corr_vus';
+const vusLire = () => { try{ return JSON.parse(localStorage.getItem(VUS_K)||'null'); }catch(e){ return null; } };
+const vusEcrire = v => { try{ localStorage.setItem(VUS_K, JSON.stringify(v.slice(-500))); }catch(e){} };
+async function activerAlertes(){ try{ ALERTE.perm = await Notification.requestPermission(); }catch(e){}
+  if(ALERTE.perm==='granted'){ const r = await abonner(); toast(r ? '🔔 Alertes activées : tu seras prévenu même navigateur fermé.' : '🔔 Alertes activées (tant que cette page est ouverte ou en arrière-plan).'); }
+  else toast('Alertes refusées : autorise les notifications pour ce site dans les réglages du navigateur.'); rendre(); }
+async function swEnregistrer(){ if(ALERTE.reg) return ALERTE.reg; if(!('serviceWorker' in navigator)) return null;
+  try{ await navigator.serviceWorker.register('correcteurs-sw.js'); ALERTE.reg = await navigator.serviceWorker.ready; }catch(e){} return ALERTE.reg; }
+/* alertes même navigateur fermé : le téléphone s'abonne au service d'envoi de son navigateur (clé publique de la fonction
+   serveur « alertes-correcteurs ») et l'adresse d'envoi est enregistrée dans Supabase */
+async function abonner(){ try{ const reg = await swEnregistrer(); if(!reg || !reg.pushManager || !SB) return false;
+    const {data:cle, error} = await SB.rpc('push_cle_publique'); if(error || !cle) return false;
+    const k = Uint8Array.from(atob(cle.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((cle.length+3)%4)), c=>c.charCodeAt(0));
+    let sub = await reg.pushManager.getSubscription();
+    if(sub && sub.options && sub.options.applicationServerKey && btoa(String.fromCharCode(...new Uint8Array(sub.options.applicationServerKey))) !== btoa(String.fromCharCode(...k))){ try{ await sub.unsubscribe(); }catch(e){} sub = null; }
+    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:k});
+    const r = await SB.rpc('push_abonner', {p_endpoint:sub.endpoint}); return !!(r.data && r.data.ok); }catch(e){ return false; } }
+function alerter(){ const af = D.L.filter(d=>!monAvis(d)).map(d=>d.qid), vus = vusLire();
+  if(vus === null){ vusEcrire(af); return; }                       /* première visite : pas d'alerte pour l'existant */
+  const nv = af.filter(q=>!vus.includes(q)); if(!nv.length) return; vusEcrire(vus.concat(nv));
+  const t = nv.length===1 ? '1 nouvelle question à vérifier' : nv.length+' nouvelles questions à vérifier';
+  try{ navigator.vibrate && navigator.vibrate([120, 80, 120]); }catch(e){}
+  if(ALERTE.perm!=='granted'){ toast('🔔 '+t); return; }
+  const o = {body:'Révision INFAS — équipe de correction', tag:'ri-correcteurs', renotify:true};
+  (ALERTE.reg && ALERTE.reg.showNotification ? ALERTE.reg.showNotification(t, o) : Promise.reject()).catch(()=>{ try{ new Notification(t, o); }catch(e){} }); }
+setInterval(()=>{ if(MOI && (MOI.correcteur || MOI.admin) && !OUV) dossiers(); }, 120e3);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && MOI && (MOI.correcteur || MOI.admin) && !OUV) dossiers(); });
+demarrer();
+</script>
+</body>
+</html>
