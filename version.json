@@ -1,14 +1,10 @@
 {
- "v": "275994654e",
+ "v": "4894b3a106",
  "date": "2026-11-18",
- "sig": "a7b9ad07c42625e116217b09b86f2d6e9973e29a",
+ "sig": "ac2a16230bd56fdc41a6de442d578deebd61ac18",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
-  },
-  {
-   "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
-   "m": "xmvkq4zed"
   }
  ],
  "mats": {
@@ -115,11 +111,20 @@
  },
  "hist": [
   {
-   "v": "275994654e",
+   "v": "4894b3a106",
    "date": "2026-11-18",
    "notes": [
     {
      "t": "Nouvelle mise à jour"
+    }
+   ]
+  },
+  {
+   "v": "7143ea99e7",
+   "date": "2026-11-18",
+   "notes": [
+    {
+     "t": "Nouveau sujet J1 Santé publique (IDE/SFM)"
     },
     {
      "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
@@ -228,15 +233,6 @@
     {
      "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
      "m": "xmvkq4zed"
-    }
-   ]
-  },
-  {
-   "v": "6897e9d1c6",
-   "date": "2026-11-16",
-   "notes": [
-    {
-     "t": "Télécharge et partage l'appli"
     }
    ]
   }
