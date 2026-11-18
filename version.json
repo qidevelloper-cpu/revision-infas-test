@@ -1,10 +1,14 @@
 {
- "v": "4894b3a106",
+ "v": "22d6aee90f",
  "date": "2026-11-18",
- "sig": "ac2a16230bd56fdc41a6de442d578deebd61ac18",
+ "sig": "fcb9f172805934f86186499358f36898a21108e6",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
+  },
+  {
+   "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
+   "m": "xmvkq4zed"
   }
  ],
  "mats": {
@@ -42,7 +46,7 @@
   },
   "xmvkq4zed": {
    "t": "CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
-   "h": "8ace4abd8793f1d82e7718a55bc71090d04f7942"
+   "h": "705d0e21855702d4c001651854c1564bea462a3d"
   },
   "xmvkq53re": {
    "t": "Pharmacologie",
@@ -111,11 +115,15 @@
  },
  "hist": [
   {
-   "v": "4894b3a106",
+   "v": "22d6aee90f",
    "date": "2026-11-18",
    "notes": [
     {
      "t": "Nouvelle mise à jour"
+    },
+    {
+     "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
+     "m": "xmvkq4zed"
     }
    ]
   },

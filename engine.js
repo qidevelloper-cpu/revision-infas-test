@@ -1247,6 +1247,75 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
   window.addEventListener('popstate', () => { if (ov && !ov.classList.contains('hidden')) { close(); try { history.pushState({ calc: 1 }, ''); } catch (e) {} } });
 })();
 
+/* ---------- 11 bis. TABLE DE LUND ET BROWDER (brûlures) : bouton flottant déplaçable, seulement dans les sujets de Chirurgie ----------
+   Comme la calculatrice : le bouton se glisse où l'on veut, un appui ouvre le tableau (fenêtre déplaçable par sa barre du haut).
+   Affiché : questions du portail (affichage en entier, quiz, examen) dont au moins une vient de la Chirurgie (cours, sujet ou session
+   d'une appli complète comme la Correction nationale), appli « Chirurgie », quiz interne d'une appli sur un sujet de Chirurgie. */
+(function () {
+  const ROWS = [['Tête', '19', '17', '13', '10', '7'], ['Cou', '2', '2', '2', '2', '2'], ['Tronc antérieur', '13', '13', '13', '13', '13'], ['Tronc postérieur', '13', '13', '13', '13', '13'],
+    ['Une fesse', '2,5', '2,5', '2,5', '2,5', '2,5'], ['Organe gén. ext.', '1', '1', '1', '1', '1'], ['Un bras', '4', '4', '4', '4', '4'], ['Un avant-bras', '3', '3', '3', '3', '3'],
+    ['Une main', '2,5', '2,5', '2,5', '2,5', '2,5'], ['Une cuisse', '5,5', '6,5', '8,5', '8,5', '9,5'], ['Une jambe', '5', '5', '5,5', '6', '7'], ['Un pied', '3,5', '3,5', '3,5', '3,5', '3,5']];
+  const AGES = ['0-1 an', '1-4 ans', '5-9 ans', '10-15 ans', 'Adulte'];
+  const css = `
+.lb-fab{position:fixed;z-index:240;display:none;align-items:center;gap:6px;height:44px;padding:0 10px 0 12px;border-radius:999px;background:var(--card-flat,#fff);color:var(--ink,#16231F);border:1px solid var(--coral,#E8772E);box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font:700 12.5px var(--sans,'Inter',system-ui,sans-serif)}
+.lb-fab.on{display:inline-flex}.lb-fab .grip{font-size:13px;opacity:.55;margin-left:2px}.lb-fab.dragging{cursor:grabbing;transform:scale(1.04)}
+.lb-ov{position:fixed;inset:0;z-index:250;pointer-events:none}.lb-ov.hidden{display:none}
+.lb-sheet{pointer-events:auto;position:fixed;left:0;top:0;width:360px;max-width:calc(100vw - 16px);max-height:calc(100vh - 90px);overflow:auto;background:var(--card-flat,#fff);color:var(--ink,#16231F);border:1px solid var(--card-border,rgba(0,0,0,.14));border-radius:18px;padding:8px 10px 10px;box-shadow:0 18px 50px rgba(0,0,0,.35);font-family:var(--sans,'Inter',system-ui,sans-serif)}
+.lb-drag{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}.lb-grip{display:block;width:38px;height:4px;border-radius:4px;background:rgba(0,0,0,.2);margin:0 auto 6px}
+.lb-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.lb-title{font-weight:800;font-size:14px}
+.lb-x{width:30px;height:30px;border-radius:50%;border:1px solid var(--card-border,rgba(0,0,0,.14));background:transparent;color:inherit;font-size:13px;cursor:pointer}
+.lb-t{width:100%;border-collapse:collapse;font-size:12px}.lb-t th,.lb-t td{border:1px solid var(--card-border,rgba(0,0,0,.18));padding:4px 5px}
+.lb-t th{font-weight:800;text-align:center;background:rgba(232,119,46,.14);color:var(--ink,#16231F)!important;opacity:1}.lb-t td{color:var(--ink,#16231F)}.lb-t td{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.lb-t td:first-child{text-align:left;white-space:normal;font-weight:600}
+.lb-n{margin-top:6px;font-size:11px;opacity:.7}`;
+  const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+  const tab = '<table class="lb-t"><thead><tr><th>Localisation</th>' + AGES.map(a => '<th>' + a + '</th>').join('') + '</tr></thead><tbody>' +
+    ROWS.map(r => '<tr><td>' + r[0] + '</td>' + r.slice(1).map(v => '<td>' + v + ' %</td>').join('') + '</tr>').join('') + '</tbody></table>';
+  const ov = document.createElement('div'); ov.className = 'lb-ov hidden'; ov.id = 'lb-ov';
+  ov.innerHTML = '<div class="lb-sheet" role="dialog" aria-label="Table de Lund et Browder"><div class="lb-drag"><span class="lb-grip"></span><div class="lb-top"><span class="lb-title">🔥 Table de Lund et Browder</span><button class="lb-x" aria-label="Fermer">✕</button></div></div>' + tab +
+    '<div class="lb-n">Pourcentage de la surface corporelle selon l\'âge.</div></div>';
+  document.body.appendChild(ov);
+  const sh = ov.querySelector('.lb-sheet'), PK = 'ri_lb_pos_v1', FK = 'ri_lb_fab_v1';
+  const lire = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') } catch (e) { return {} } }, ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) {} };
+  let P = lire(PK), FP = lire(FK);
+  const placer = () => { const r = sh.getBoundingClientRect(), W = innerWidth, H = innerHeight; let x = P.x, y = P.y;
+    if (x == null || y == null) { x = (W - r.width) / 2; y = Math.max(10, (H - r.height) / 2 - 30) }
+    x = Math.max(4, Math.min(W - r.width - 4, x)); y = Math.max(4, Math.min(H - 60, y)); sh.style.left = x + 'px'; sh.style.top = y + 'px' };
+  const ouvrir = () => { ov.classList.remove('hidden'); requestAnimationFrame(placer) }, fermer = () => ov.classList.add('hidden');
+  ov.querySelector('.lb-x').onclick = fermer;
+  let sd = null; const dg = ov.querySelector('.lb-drag');
+  dg.addEventListener('pointerdown', e => { if (e.target.closest('.lb-x')) return; const r = sh.getBoundingClientRect(); sd = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId }; try { dg.setPointerCapture(e.pointerId) } catch (_) {} });
+  dg.addEventListener('pointermove', e => { if (!sd || e.pointerId !== sd.id) return; P.x = e.clientX - sd.dx; P.y = e.clientY - sd.dy; placer(); e.preventDefault() });
+  const sfin = e => { if (sd && e.pointerId === sd.id) { sd = null; ecrire(PK, P) } }; dg.addEventListener('pointerup', sfin); dg.addEventListener('pointercancel', sfin);
+  const fab = document.createElement('div'); fab.className = 'lb-fab'; fab.setAttribute('role', 'button'); fab.tabIndex = 0; fab.setAttribute('aria-label', 'Ouvrir la table de Lund et Browder');
+  fab.innerHTML = '<span>🔥</span><span>Lund et Browder</span><span class="grip" aria-hidden="true">⠿</span>'; document.body.appendChild(fab);
+  const placeFab = () => { const r = fab.getBoundingClientRect(), W = innerWidth, H = innerHeight; let x = FP.x, y = FP.y;
+    if (x == null || y == null) { const c = document.querySelector('.calc-fab.on'); const cr = c ? c.getBoundingClientRect() : null; x = W - r.width - 14; y = cr && cr.top > 60 ? cr.top - r.height - 10 : 80 }
+    x = Math.max(6, Math.min(W - r.width - 6, x)); y = Math.max(6, Math.min(H - r.height - 76, y)); fab.style.left = x + 'px'; fab.style.top = y + 'px' };
+  let fd = null;
+  fab.addEventListener('pointerdown', e => { const r = fab.getBoundingClientRect(); fd = { sx: e.clientX, sy: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId, moved: false }; try { fab.setPointerCapture(e.pointerId) } catch (_) {} });
+  fab.addEventListener('pointermove', e => { if (!fd || e.pointerId !== fd.id) return; if (!fd.moved && Math.hypot(e.clientX - fd.sx, e.clientY - fd.sy) < 8) return;
+    fd.moved = true; fab.classList.add('dragging'); FP.x = e.clientX - fd.dx; FP.y = e.clientY - fd.dy; placeFab(); e.preventDefault() });
+  fab.addEventListener('pointerup', e => { if (!fd || e.pointerId !== fd.id) return; const m = fd.moved; fd = null; fab.classList.remove('dragging'); if (m) ecrire(FK, FP); else (ov.classList.contains('hidden') ? ouvrir() : fermer()) });
+  fab.addEventListener('pointercancel', e => { if (fd && e.pointerId === fd.id) { fd = null; fab.classList.remove('dragging') } });
+  fab.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir() } });
+  window.addEventListener('resize', () => { placeFab(); if (!ov.classList.contains('hidden')) placer() });
+  const CH = /\bchirurgie\b/i, vu = el => !!(el && !el.classList.contains('hidden') && el.getClientRects().length);
+  const chirQ = id => { try { const q = QI[id]; if (!q) return false; const m = (MAT || []).find(x => x.id === q.m) || {}; return CH.test((m.title || '') + ' ' + (m.short || '') + ' ' + ((m.ch && q.c >= 0 && m.ch[q.c]) || '')) } catch (e) { return false } };
+  const chirNow = () => { try {
+    if (VIEW === 'appview') { const m = (MAT || []).find(x => x.id === ctx.id) || {}; if (CH.test((m.title || '') + ' ' + (m.short || '')) && !/correction|examens?\s+blancs?/i.test(m.title || '')) return true;
+      const f = document.querySelector('#appKeep.on') || document.querySelector('#appFrame:not(.hide)'); const d = f && f.contentDocument; if (!d) return false;
+      if (!vu(d.getElementById('screen-quiz'))) return false; const e = d.getElementById('q-eyebrow'); return !!(e && CH.test(e.textContent)) }
+    const sc = document.querySelector('[data-bid="quiz.main"],[data-bid="exam.main"],[data-bid="fil.main"]'); if (!sc || !sc.getClientRects().length) return false;
+    if (VIEW === 'fil' && typeof FILS !== 'undefined' && FILS && FILS.ids) return FILS.ids.some(chirQ) || CH.test(FILS.label || '');   /* session affichée en entier : au moins une question de Chirurgie */
+    const S0 = VIEW === 'exam' && typeof EX !== 'undefined' && EX ? EX : (typeof QZ !== 'undefined' ? QZ : null);
+    if (S0 && S0.ids && S0.ids.length && S0.idx != null && QI[S0.ids[S0.idx]]) return chirQ(S0.ids[S0.idx]);
+    return CH.test(String(sc.innerText || '').slice(0, 400)) } catch (e) { return false } };
+  let was = null;
+  const sync = () => { const on = chirNow(); if (on !== was) { was = on; fab.classList.toggle('on', on); if (on) requestAnimationFrame(placeFab); else fermer() } };
+  setInterval(sync, 800); sync();
+  window.lundBrowder = { ouvrir, fermer, chirNow };
+})();
+
 /* ---------- 12. APPLICATIONS COMPLÈTES : choix de l'interface + grade Révision INFAS à la place des badges ---------- */
 function appUiOf(mid){return(S.appUi&&S.appUi[mid])||'ri'}
 function setAppUi(mid,v){S.appUi=S.appUi||{};S.appUi[mid]=v;save();render()}
