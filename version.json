@@ -1,10 +1,14 @@
 {
- "v": "22d6aee90f",
- "date": "2026-11-18",
- "sig": "fcb9f172805934f86186499358f36898a21108e6",
+ "v": "62b3c1be72",
+ "date": "2026-11-19",
+ "sig": "bbb784f4b82a6920853b794539d488dd301d9a3c",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
+  },
+  {
+   "t": "🔄 Cours mis à jour : Gynéco-Obstétrique",
+   "m": "gyneco"
   },
   {
    "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
@@ -18,7 +22,7 @@
   },
   "gyneco": {
    "t": "Gynéco-Obstétrique",
-   "h": "ee5f6602625b3f1d7669ead4febc7723ef24d3a5"
+   "h": "e49ee390477d595fbc7f7829294f0718a35ad112"
   },
   "vih": {
    "t": "VIH & traitement ARV",
@@ -115,11 +119,15 @@
  },
  "hist": [
   {
-   "v": "22d6aee90f",
-   "date": "2026-11-18",
+   "v": "62b3c1be72",
+   "date": "2026-11-19",
    "notes": [
     {
      "t": "Nouvelle mise à jour"
+    },
+    {
+     "t": "🔄 Cours mis à jour : Gynéco-Obstétrique",
+     "m": "gyneco"
     },
     {
      "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",

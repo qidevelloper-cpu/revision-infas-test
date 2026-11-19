@@ -1115,11 +1115,12 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
       const cs = SIZES.includes(P.cs) ? P.cs : 1; sh.style.setProperty('--cs', cs);
       const r = sh.getBoundingClientRect(), W = innerWidth, H = innerHeight;
       let x = P.x, y = P.y;
-      if (x == null || y == null) { x = (W - r.width) / 2; y = H - r.height - 10; }
+      if (x == null || y == null) { x = (W - r.width) / 2; y = (H - r.height) / 2; }
       x = Math.max(4, Math.min(W - r.width - 4, x)); y = Math.max(4, Math.min(H - Math.min(r.height, 60) - 4, y));
       sh.style.left = x + 'px'; sh.style.top = y + 'px';
     };
     ov._applyP = () => { applyP(); ajuster(); };
+    ov._centre = () => { delete P.x; delete P.y; };
     ov.querySelector('#calc-smaller').onclick = () => { const i = SIZES.indexOf(SIZES.includes(P.cs) ? P.cs : 1); P.cs = SIZES[Math.max(0, i - 1)]; save(); applyP(); ajuster(); };
     ov.querySelector('#calc-bigger').onclick = () => { const i = SIZES.indexOf(SIZES.includes(P.cs) ? P.cs : 1); P.cs = SIZES[Math.min(SIZES.length - 1, i + 1)]; save(); applyP(); ajuster(); };
     const drag = ov.querySelector('#calc-drag');
@@ -1207,7 +1208,7 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
   const placeFab = () => {
     const r = fab.getBoundingClientRect(), W = innerWidth, H = innerHeight;
     let x = FP.x, y = FP.y;
-    if (x == null || y == null) { const sc = document.querySelector('#screen-quiz .quiz-score'); const sr = sc ? sc.getBoundingClientRect() : null; x = W - r.width - 14; y = sr && sr.top > 0 ? sr.top + sr.height / 2 - r.height / 2 : 130; }
+    if (x == null || y == null) { x = (W - r.width) / 2; y = (H - r.height) / 2; }   /* au centre ; l'élève le déplace où il veut */
     x = Math.max(6, Math.min(W - r.width - 6, x)); y = Math.max(6, Math.min(H - r.height - 76, y));
     fab.style.left = x + 'px'; fab.style.top = y + 'px';
   };
@@ -1240,7 +1241,10 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
     return !!(q && !q.classList.contains('hidden') && q.getClientRects().length);
   };
   let wasOn = null;
-  const sync = () => { const on = quizOn(); if (on !== wasOn) { wasOn = on; fab.classList.toggle('on', on); if (on) requestAnimationFrame(placeFab); else close(); } };
+  const sessionCourante = () => { try { return (VIEW === 'fil' && typeof FILS !== 'undefined' && FILS) || (VIEW === 'exam' && typeof EX !== 'undefined' && EX) || (VIEW === 'quiz' && typeof QZ !== 'undefined' && QZ) || null; } catch (e) { return null; } };
+  let derSess = null;
+  const sync = () => { const on = quizOn(), se = on ? sessionCourante() : null, neuf = on && se && se !== derSess; if (se) derSess = se;
+    if (on !== wasOn || neuf) { wasOn = on; fab.classList.toggle('on', on); if (on) { FP = {}; if (ov && ov._centre) ov._centre(); if (neuf) close(); requestAnimationFrame(placeFab); } else close(); } };   /* chaque nouveau sujet : bouton et calculatrice repartent du centre */
   new MutationObserver(sync).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class', 'style', 'hidden'] });
   setInterval(sync, 800); sync();
   // bouton retour du téléphone : ferme d'abord la calculatrice
@@ -1278,7 +1282,7 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
   const lire = k => { try { return JSON.parse(localStorage.getItem(k) || '{}') } catch (e) { return {} } }, ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) {} };
   let P = lire(PK), FP = lire(FK);
   const placer = () => { const r = sh.getBoundingClientRect(), W = innerWidth, H = innerHeight; let x = P.x, y = P.y;
-    if (x == null || y == null) { x = (W - r.width) / 2; y = Math.max(10, (H - r.height) / 2 - 30) }
+    if (x == null || y == null) { x = (W - r.width) / 2; y = Math.max(10, (H - r.height) / 2) }   /* au centre ; l'élève la déplace où il veut */
     x = Math.max(4, Math.min(W - r.width - 4, x)); y = Math.max(4, Math.min(H - 60, y)); sh.style.left = x + 'px'; sh.style.top = y + 'px' };
   const ouvrir = () => { ov.classList.remove('hidden'); requestAnimationFrame(placer) }, fermer = () => ov.classList.add('hidden');
   ov.querySelector('.lb-x').onclick = fermer;
@@ -1289,7 +1293,7 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
   const fab = document.createElement('div'); fab.className = 'lb-fab'; fab.setAttribute('role', 'button'); fab.tabIndex = 0; fab.setAttribute('aria-label', 'Ouvrir la table de Lund et Browder');
   fab.innerHTML = '<span>🔥</span><span>Lund et Browder</span><span class="grip" aria-hidden="true">⠿</span>'; document.body.appendChild(fab);
   const placeFab = () => { const r = fab.getBoundingClientRect(), W = innerWidth, H = innerHeight; let x = FP.x, y = FP.y;
-    if (x == null || y == null) { const c = document.querySelector('.calc-fab.on'); const cr = c ? c.getBoundingClientRect() : null; x = W - r.width - 14; y = cr && cr.top > 60 ? cr.top - r.height - 10 : 80 }
+    if (x == null || y == null) { x = (W - r.width) / 2; y = H / 2 - r.height - 32 }   /* au centre, juste au-dessus de la calculatrice */
     x = Math.max(6, Math.min(W - r.width - 6, x)); y = Math.max(6, Math.min(H - r.height - 76, y)); fab.style.left = x + 'px'; fab.style.top = y + 'px' };
   let fd = null;
   fab.addEventListener('pointerdown', e => { const r = fab.getBoundingClientRect(); fd = { sx: e.clientX, sy: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId, moved: false }; try { fab.setPointerCapture(e.pointerId) } catch (_) {} });
@@ -1311,7 +1315,10 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
     if (S0 && S0.ids && S0.ids.length && S0.idx != null && QI[S0.ids[S0.idx]]) return chirQ(S0.ids[S0.idx]);
     return CH.test(String(sc.innerText || '').slice(0, 400)) } catch (e) { return false } };
   let was = null;
-  const sync = () => { const on = chirNow(); if (on !== was) { was = on; fab.classList.toggle('on', on); if (on) requestAnimationFrame(placeFab); else fermer() } };
+  let derS = null;
+  const sessionLB = () => { try { return (VIEW === 'fil' && typeof FILS !== 'undefined' && FILS) || (VIEW === 'exam' && typeof EX !== 'undefined' && EX) || (VIEW === 'quiz' && typeof QZ !== 'undefined' && QZ) || null } catch (e) { return null } };
+  const sync = () => { const on = chirNow(), se = on ? sessionLB() : null, neuf = on && se && se !== derS; if (se) derS = se;
+    if (on !== was || neuf) { was = on; fab.classList.toggle('on', on); if (on) { FP = {}; P = {}; if (neuf) fermer(); requestAnimationFrame(placeFab) } else fermer() } };   /* chaque nouveau sujet : bouton et tableau repartent du centre */
   setInterval(sync, 800); sync();
   window.lundBrowder = { ouvrir, fermer, chirNow };
 })();
@@ -1684,7 +1691,7 @@ function corrPatch(){var J='j-preparation-de';function city(n){return String(n).
  document.querySelectorAll('[id="btn-start-unseen"]').forEach(function(x){if(x!==document.getElementById('btn-start-unseen')){var c=x.cloneNode(true);x.parentNode.replaceChild(c,x);c.addEventListener('click',function(){openConfigWith({});cfgState.unseen=true;renderConfig()})}});
  /* plus de profil dans cette appli (le grade et les couleurs sont ceux de Révision INFAS) */
  function noProfile(){var b=document.querySelector('#bnav button[data-go="profile"]');if(b)b.remove()}
- var st=document.createElement('style');st.textContent='.lq-h .t{font-size:18px!important;letter-spacing:.03em!important}.lq-h .n{font-size:12.5px!important}#cfg-antennes{display:flex!important;flex-direction:column!important;gap:5px!important}#cfg-antennes>.chip{align-self:flex-start}.ri-antrow{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center}.ri-ants{min-width:0}.ri-antc{font-weight:800;font-size:13.5px}.ri-ants .chip{width:100%!important;box-sizing:border-box!important;overflow:hidden;display:flex!important;justify-content:space-between!important;gap:4px;padding:6px 8px!important;font-size:12.5px!important;min-height:0!important;margin:0!important;white-space:nowrap}#cfg-antennes .chip-count{font-size:10.5px!important;padding:1px 5px!important}.ri-3 .ri-ants .chip{flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;padding:5px 3px!important;white-space:normal!important;text-align:center}.ri-3 .ri-antc{font-size:12.5px}.ri-subh{font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:.4px;margin:12px 4px 4px;opacity:.85}.ri-jyear{display:flex;flex-direction:column;gap:6px;margin-top:4px}.ri-jyh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 4px 2px;cursor:pointer;border-radius:10px}.ri-jyh.on .ri-antc::after{content:" ✓"}.ri-jgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ri-jgrid .chip{width:100%!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;padding:6px 4px!important;margin:0!important;min-height:0!important;text-align:center;white-space:normal!important;font-size:12.5px!important}.ri-jl{font-weight:800;line-height:1.2}.ri-js{font-size:10.5px;opacity:.75;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ri-jgrid .chip-count{margin:0!important}@media(max-width:380px){.ri-jgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}';document.head.appendChild(st);
+ var st=document.createElement('style');st.textContent='html,body{-webkit-tap-highlight-color:transparent;touch-action:manipulation}.mat-tile,.chip,.ri-antc,.ri-js,#cfg-mode button,.config-card button{-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;transition:transform .12s ease,background-color .15s ease,border-color .15s ease}.mat-tile:active,.chip:active,.ri-antc:active,.ri-js:active,#cfg-mode button:active{transform:scale(.97)}.lq-h .t{font-size:18px!important;letter-spacing:.03em!important}.lq-h .n{font-size:12.5px!important}#cfg-antennes{display:flex!important;flex-direction:column!important;gap:5px!important}#cfg-antennes>.chip{align-self:flex-start}.ri-antrow{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:6px;align-items:center}.ri-ants{min-width:0}.ri-antc{font-weight:800;font-size:13.5px}.ri-ants .chip{width:100%!important;box-sizing:border-box!important;overflow:hidden;display:flex!important;justify-content:space-between!important;gap:4px;padding:6px 8px!important;font-size:12.5px!important;min-height:0!important;margin:0!important;white-space:nowrap}#cfg-antennes .chip-count{font-size:10.5px!important;padding:1px 5px!important}.ri-3 .ri-ants .chip{flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;padding:5px 3px!important;white-space:normal!important;text-align:center}.ri-3 .ri-antc{font-size:12.5px}.ri-subh{font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:.4px;margin:12px 4px 4px;opacity:.85}.ri-jyear{display:flex;flex-direction:column;gap:6px;margin-top:4px}.ri-jyh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 4px 2px;cursor:pointer;border-radius:10px}.ri-jyh.on .ri-antc::after{content:" ✓"}.ri-jgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.ri-jgrid .chip{width:100%!important;box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:2px!important;padding:6px 4px!important;margin:0!important;min-height:0!important;text-align:center;white-space:normal!important;font-size:12.5px!important}.ri-jl{font-weight:800;line-height:1.2}.ri-js{font-size:10.5px;opacity:.75;line-height:1.2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.ri-jgrid .chip-count{margin:0!important}@media(max-width:380px){.ri-jgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}';document.head.appendChild(st);
  noProfile();fixList();setInterval(function(){noProfile();fixList()},500);try{renderHome()}catch(e){}}
 function corrCss(){const t=palette(),cs=getComputedStyle(document.documentElement),v=n=>cs.getPropertyValue(n).trim();const card=v('--card')||'#fff',ink=v('--ink')||'#16231F',soft=v('--soft')||'#5E6E68',line=v('--line')||'#E1DDD2';
  return `.sig.top,.wrap>.sig,body>.sig,.sig-divider{display:none!important}
