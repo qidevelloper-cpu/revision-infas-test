@@ -2481,7 +2481,7 @@ const RIC={
   try{await post('reports',[row])}
   catch(e){if(!/^4\d\d /.test(e.message)||!/photo|eleve|column/i.test(e.message))throw e;
    const r2=Object.assign({},row);if(r2.photo)r2.message=(r2.message+'\n[📷 photo : '+r2.photo+']').slice(0,1100);if(r2.eleve)r2.message=(r2.message+'\n['+r2.eleve+']').slice(0,1200);delete r2.photo;delete r2.eleve;await post('reports',[r2])}}
- RIC.report=function(qid){const q=QI[qid];if(!q)return;if((RIC.cfg.nosig||{})[qid]){toast('Cette question a déjà été vérifiée par l’enseignant ✅');return}let o=$('#rirep');if(o)o.remove();o=document.createElement('div');o.id='rirep';o.className='pmod';let photo=null,b64=null;
+ RIC.report=function(qid){const q=QI[qid];if(!q)return;if((window.riNosig?riNosig(qid):(RIC.cfg.nosig||{})[qid])){toast('Cette question a déjà été vérifiée par l’enseignant ✅');return}let o=$('#rirep');if(o)o.remove();o=document.createElement('div');o.id='rirep';o.className='pmod';let photo=null,b64=null;
   const m=(typeof matOf==='function'&&matOf(q.m))||{};
   o.innerHTML=`<div class="pbox"><h3>⚑ Signaler une erreur</h3><div class="muted small" style="margin-bottom:8px"><b>${esc(m.short||m.title||q.m)}</b> · ${esc(q.q).slice(0,240)}</div>
    <textarea class="tin" id="rirepT" rows="4" maxlength="1000" placeholder="Explique l’erreur : mauvaise réponse, faute, image manquante… Tu peux proposer la bonne réponse."></textarea>
@@ -2718,7 +2718,7 @@ ${auto?`    <div class="ri-envoi"><div>Tu paies <b>${fcfa(P.prix_xof)}</b> direc
   if(VIEW==='fil'&&FILS){const lockEx=!RIC.can('fonction:explications');
    $$('.filq',app).forEach(card=>{const fb=$('.fb',card);if(!fb)return;
     if(lockEx)$$('.ex,.xbox',card).forEach(x=>{if(x.classList.contains('ri-lockx'))return;x.innerHTML='🔒 <b>Explication réservée aux élèves Premium.</b> <a href="#" onclick="RIC.paywall(\'fonction:explications\',\'Explications · Premium\');return false">Voir l’offre</a>';x.classList.add('ri-lockx')});
-    if(!$('.ri-rep',card)){const qid=card.id.replace(/^fq-/,'');if((RIC.cfg.nosig||{})[qid])return;card.insertAdjacentHTML('beforeend',`<button class="ri-rep" onclick="RIC.report('${jsq(qid)}')">⚑ Signaler une erreur dans cette question</button>`)}})}}
+    if(!$('.ri-rep',card)){const qid=card.id.replace(/^fq-/,'');if((window.riNosig?riNosig(qid):(RIC.cfg.nosig||{})[qid]))return;card.insertAdjacentHTML('beforeend',`<button class="ri-rep" onclick="RIC.report('${jsq(qid)}')">⚑ Signaler une erreur dans cette question</button>`)}})}}
  if(typeof render==='function'){const _render=render;render=function(){const r=_render.apply(this,arguments);try{decorate()}catch(e){console.warn('RI cloud',e)}return r};}
 
  /* ---------- styles ---------- */
@@ -4151,5 +4151,63 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
  @keyframes riFlash{0%,100%{box-shadow:0 0 0 0 rgba(108,59,245,0)}30%{box-shadow:0 0 0 8px rgba(108,59,245,.45)}60%{box-shadow:0 0 0 3px rgba(108,59,245,.25)}}
  .ri-flash{animation:riFlash 1.6s ease 2}`;document.head.appendChild(st)}
  const C=BLK['home.commu'];if(C){const h=C.html,o=C.oneui;C.html=function(){return riTelechHTML(0)+h.apply(this,arguments)};if(o)C.oneui=function(){return riTelechHTML(1)+o.apply(this,arguments)}}
+})();
+/* ---------- NOTES VOCALES SOUS LES QUESTIONS (après la réponse, élèves Premium) ----------
+   Une question peut avoir une note enregistrée : champ « au » de sa correction (adresse publique du stockage Supabase
+   « notes-vocales », publiée depuis le tableau de bord, ou proposée par un correcteur puis validée par l'administrateur).
+   Sinon, la voix du téléphone lit l'explication écrite (speechSynthesis, en français, sans données ni connexion).
+   Réservé aux élèves Premium (un réglage « fonction:notes-vocales » du tableau de bord, s'il existe, l'emporte) ;
+   les autres voient le bouton avec 🔒, qui ouvre l'offre Premium. Studio / éditeur : toujours visible. */
+(function(){
+ const PFX=()=>String(RIC.url||'')+'/storage/v1/object/public/notes-vocales/';
+ const auOk=u=>typeof u==='string'&&!!RIC.url&&u.startsWith(PFX())&&!u.includes('..')&&/^[A-Za-z0-9._\/@%+-]+$/.test(u.slice(PFX().length));
+ const ttsOk=()=>typeof window.speechSynthesis!=='undefined'&&typeof window.SpeechSynthesisUtterance!=='undefined';
+ const droit=()=>{if(RIC.off())return true;const R=(RIC.cfg&&RIC.cfg.regles)||{};if(R['fonction:notes-vocales'])return RIC.can('fonction:notes-vocales');return RIC.isPremium()};
+ function texte(q){let x=typeof riXtxt==='function'?riXtxt(q.x||''):String(q.x||'');
+  x=x.split('\n').filter(l=>!/^\s*(Sources?|Source externe[^:]*)\s*:/i.test(l)).join('\n');
+  return x.replace(/‰/g,' pour mille').replace(/\s+/g,' ').trim()}
+ let cur=null;
+ function voix(){let V=[];try{V=speechSynthesis.getVoices()||[]}catch(e){}
+  return V.find(v=>/^fr[-_]FR/i.test(v.lang)&&/google|natural|neural|premium|enhanced/i.test(v.name))||V.find(v=>/^fr[-_]FR/i.test(v.lang))||V.find(v=>/^fr/i.test(v.lang))||null}
+ function maj(){document.querySelectorAll('.ri-vox-tts').forEach(b=>{const on=b.dataset.q===cur;b.classList.toggle('on',on);
+  b.innerHTML=on?'⏹️ '+esc(Tx('vox.stop','Arrêter la lecture')):'🔊 '+esc(Tx('vox.lire','Écouter l’explication'))})}
+ window.riVox={
+  lire(qid){if(!ttsOk()||!droit())return;if(cur===qid){this.stop();return}const q=QI[qid];if(!q)return;const t=texte(q);if(!t)return;
+   try{speechSynthesis.cancel()}catch(e){}document.querySelectorAll('audio.ri-vox-au').forEach(a=>{try{a.pause()}catch(e){}});
+   const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';const v=voix();if(v)u.voice=v;u.rate=.95;
+   u.onend=u.onerror=()=>{if(cur===qid){cur=null;maj()}};cur=qid;maj();speechSynthesis.speak(u)},
+  stop(){try{if(ttsOk())speechSynthesis.cancel()}catch(e){}cur=null;maj()},
+  verrou(){RIC.paywall('fonction:notes-vocales',Tx('vox.prem','Notes vocales · Premium'))},
+  bloc,auOk};
+ function bloc(qid){const q=QI[qid];if(!q)return'';const rec=auOk(q.au),tts=ttsOk()&&!!texte(q);if(!rec&&!tts)return'';
+  if(!droit())return`<div class="ri-vox lock"><button type="button" class="ri-vox-b" onclick="riVox.verrou()">🔊 ${esc(Tx('vox.lire','Écouter l’explication'))} <span class="ri-vox-p">🔒 Premium</span></button></div>`;
+  if(rec)return`<div class="ri-vox"><div class="ri-vox-h">🎙️ ${esc(Tx('vox.note','Note vocale de l’enseignant'))}</div><audio class="ri-vox-au" controls preload="none" src="${esc(q.au)}" onplay="riVox.stop()"></audio></div>`;
+  return`<div class="ri-vox"><button type="button" class="ri-vox-b ri-vox-tts" data-q="${esc(qid)}" onclick="riVox.lire('${jsq(qid)}')">🔊 ${esc(Tx('vox.lire','Écouter l’explication'))}</button></div>`}
+ function poser(){if(typeof VIEW==='undefined'||VIEW!=='fil'){if(cur)riVox.stop();return}
+  document.querySelectorAll('#app .filq').forEach(card=>{const fb=card.querySelector('.fb');if(!fb)return;const qid=card.id.replace(/^fq-/,'');
+   const h=bloc(qid),sig=h.length+'|'+((QI[qid]||{}).au||''),ex=fb.querySelector('.ri-vox');
+   if(ex){if(ex.dataset.sig===sig)return;ex.remove()}if(!h)return;
+   const d=document.createElement('div');d.innerHTML=h;const el=d.firstElementChild;el.dataset.sig=sig;fb.appendChild(el)});maj()}
+ const _r=render;render=function(){const x=_r.apply(this,arguments);try{poser()}catch(e){console.warn('notes vocales',e)}return x};
+ if(typeof filMaj==='function'){const _fm=filMaj;filMaj=function(){const x=_fm.apply(this,arguments);try{poser()}catch(e){}return x}}
+ if(!document.getElementById('ri-voxcss')){const st=document.createElement('style');st.id='ri-voxcss';st.textContent=`.ri-vox{margin-top:12px;padding:10px 12px;border-radius:14px;background:#EEF6FF;border:1px solid #CFE3FB}
+ .ri-vox-h{font-weight:800;font-size:calc(14px*var(--ts,1));margin-bottom:6px;color:#1D4E89}.ri-vox audio{width:100%;height:40px;display:block}
+ .ri-vox-b{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;border-radius:999px;border:2px solid #2B7BD8;background:#fff;color:#1D4E89;font:inherit;font-weight:800;font-size:calc(15px*var(--ts,1));cursor:pointer}
+ .ri-vox-b.on{background:#2B7BD8;color:#fff}.ri-vox.lock{background:#F7F5FB;border-color:#E4DDF5}.ri-vox.lock .ri-vox-b{border-color:#B9A6EE;color:#5B3FB8}
+ .ri-vox-p{font-size:12px;font-weight:800;background:#F3EEFF;border-radius:999px;padding:2px 8px}
+ [data-theme="dark"] .ri-vox{background:#16263c;border-color:#24426a}[data-theme="dark"] .ri-vox-h{color:#9cc5f5}[data-theme="dark"] .ri-vox-b{background:#0f1b2b;color:#cfe3fb}
+ [data-theme="dark"] .ri-vox-b.on{background:#2B7BD8;color:#fff}[data-theme="dark"] .ri-vox.lock{background:#1f1a33;border-color:#3a2f63}`;document.head.appendChild(st)}
+})();
+/* ---------- « SIGNALER UNE ERREUR » DÉSACTIVÉ POUR UN SUJET ENTIER ----------
+   Correction « suj:<1re question du sujet> » avec {nosig:1} (tableau de bord › Signalements par sujet ou Modifier le sujet) :
+   le bouton « ⚑ Signaler une erreur » disparaît pour toutes les questions de ce sujet. Question par question : réglage
+   public.access.nosig (inchangé). riNosig(qid) répond pour les deux. */
+(function(){let C=null,CT=0,CE=null,PM={},PT=0;
+ const drap=()=>{if(C&&Date.now()-CT<1500&&CE===window.__riEdCorr)return C;CE=window.__riEdCorr;const T={};const add=L=>{(Array.isArray(L)?L:[]).forEach(c=>{if(c&&typeof c.qid==='string'&&c.qid.slice(0,4)==='suj:'&&c.c&&c.c.nosig)T[c.qid.slice(4)]=1})};
+  try{if(window.riCorrections)add(riCorrections.liste())}catch(e){}try{add(window.__riEdCorr)}catch(e){}C=T;CT=Date.now();return T};
+ function premiere(mid,qid){if(Date.now()-PT>5000){PM={};PT=Date.now()}let M=PM[mid];
+  if(!M){M=PM[mid]={};try{sujets(mid).forEach(L=>{if(L&&L[0])L.forEach(id=>{if(!(id in M))M[id]=L[0]})})}catch(e){}}return M[qid]}
+ window.riNosig=function(qid){const N=(typeof RIC!=='undefined'&&RIC.cfg&&RIC.cfg.nosig)||{};if(N[qid])return true;const D=drap();if(!Object.keys(D).length)return false;
+  const q=QI[qid];if(!q)return false;const f=premiere(q.m,qid);return !!(f&&D[f])};
 })();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

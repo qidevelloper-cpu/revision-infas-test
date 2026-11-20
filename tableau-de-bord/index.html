@@ -2677,6 +2677,7 @@ function sujQuestionsHTML(g){ const L = sujQuestions(g.k); if(!L.length) return 
 function sujActions(g){ const D = sujDrapeaux(g.f);
   return `<button class="btn sm" data-sjfav="${esc(g.f)}" title="${D.afaire?'Retirer de mes sujets à corriger':'Ajouter à mes sujets à corriger'}">${D.afaire?'⭐':'☆'} À corriger</button>
     ${D.off?`<button class="btn sm" data-sjon="${esc(g.f)}">✅ Remettre en ligne</button>`:`<button class="btn sm" data-sjoff="${esc(g.f)}">🙈 Désactiver</button>`}
+    ${D.nosig?`<button class="btn sm" data-sjns="${esc(g.f)}" data-v="0" title="Les élèves ne peuvent plus signaler ce sujet">⚑ Réactiver le signalement</button>`:`<button class="btn sm" data-sjns="${esc(g.f)}" data-v="1" title="Retirer « Signaler une erreur » sur toutes les questions du sujet">🚫 Signalement</button>`}
     <button class="btn sm pri" data-sjedit="${esc(g.m)}|${g.n}">📝 Corriger le sujet</button>`; }
 function sujSignalesCarte(){
   if(QX.etat!=='ok') return `<div class="card" style="margin-bottom:14px"><b>🎯 Sujets les plus signalés</b><p class="muted" style="margin:6px 0 0;font-size:13px">⏳ Lecture des sujets de l’appli…</p></div>`;
@@ -2719,6 +2720,7 @@ function bindSujSig(){
     if(await sujMarquer(f, {afaire: on ? 1 : null, off: on ? sujDrapeaux(f).off||null : null}, on?'Sujet mis à corriger':'Sujet retiré des sujets à corriger')){ toast(on?'⭐ Ajouté à vos sujets à corriger.':'Retiré de vos sujets à corriger'+(sujDrapeaux(f).off?'':' (et remis en ligne s’il était désactivé).')); re(); } else b.disabled = false; });
   document.querySelectorAll('[data-sjoff]').forEach(b=>b.onclick=()=>confirmModal('Désactiver ce sujet ?', 'Il reste à sa place mais devient grisé « 🛠️ En correction » chez les élèves (site élèves et site test), à leur prochaine ouverture. Il est ajouté à « ⭐ Mes sujets à corriger ».', '🙈 Désactiver', async ()=>{
     closeModal(); if(await sujMarquer(b.dataset.sjoff, {off:1, afaire:1}, 'Sujet désactivé (en correction)')){ toast('🙈 Sujet désactivé : corrigez-le puis « Remettre en ligne ».', 5000); re(); } }));
+  document.querySelectorAll('[data-sjns]').forEach(b=>b.onclick=async()=>{ b.disabled = true; if(await sujNosig(b.dataset.sjns, b.dataset.v==='1')) re(); else b.disabled = false; });
   document.querySelectorAll('[data-sjon]').forEach(b=>b.onclick=async()=>{ b.disabled = true;
     if(await sujMarquer(b.dataset.sjon, {off:null, afaire:null}, 'Sujet remis en ligne')){ toast('✅ Sujet remis en ligne : les élèves le retrouvent à leur prochaine ouverture.', 5000); re(); } else b.disabled = false; });
 }
@@ -3053,6 +3055,7 @@ function qxSujEditer(mid, k, focus){
   openModal(`<button class="iconbtn x" id="mx" aria-label="Fermer">${ic('x')}</button><h2 style="margin:0 0 4px;font-family:var(--display)">📝 Modifier le sujet</h2>
     <p class="muted" style="margin:0 0 10px;font-size:13px">${esc(matName(mid))} · ${Q.length} questions · seules les parties modifiées sont publiées. Cochez ou décochez les <b>bonnes réponses</b> directement (plusieurs possibles en QCM) ; Vrai / Faux pour les QCD.</p>
     <label class="lbl" for="sjt">Titre du sujet</label><input class="field" id="sjt" maxlength="160" value="${esc(titre0)}">
+    <label class="row" style="gap:8px;margin-top:10px;cursor:pointer;padding:10px 12px;border-radius:12px;background:var(--soft,#f4f2fb)"><input type="checkbox" id="sjns" ${sujDrapeaux(S0.first).nosig?'checked':''} style="width:18px;height:18px"><span>🚫 <b>Désactiver « Signaler une erreur »</b> pour tout ce sujet (${Q.length} questions : les élèves ne verront plus le bouton) <span class="cnote">· enregistré tout de suite</span></span></label>
     ${focus?`<div class="cnote" style="margin:8px 0 0;padding:8px 10px;border-radius:10px;background:#fff7ed;border:1.5px solid #f59e0b">🚩 La question signalée est encadrée en orange (question ${Q.findIndex(q=>q.id===focus)+1}).</div>`:''}
     ${Q.map((q,i)=>`<div class="card" id="sjcard${i}" style="margin:12px 0 0;padding:12px;border:${q.id===focus?'2.5px solid #f59e0b;background:#fffbeb':'1.5px solid var(--line)'}"><div class="row" style="gap:8px;align-items:center"><b>Question ${i+1}</b><span class="pill">${q.t==='vf'?'QCD':q.t==='open'?'Ouverte':'QCM'}</span><span class="muted" style="font-size:12px;flex:1">${esc(q.id)}${q.__corr?' · corrigée':''}</span><label class="cnote" style="display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" id="sjoff${i}" ${q.off?'checked':''}> 🙈 Désactivée</label><button type="button" class="btn sm" data-sjrep="${esc(q.id)}" title="Images, photo source, détails">✏️ Détail…</button></div>
       ${q.s?`<label class="lbl" for="sjs${i}">Situation clinique</label><textarea class="field" id="sjs${i}" rows="2">${esc(q.s)}</textarea>`:''}
@@ -3070,6 +3073,7 @@ function qxSujEditer(mid, k, focus){
   $('#mx').onclick = $('#mno').onclick = fermer;
   if(focus){ const fi = Q.findIndex(q=>q.id===focus), el = fi>=0 && document.getElementById('sjcard'+fi); if(el) setTimeout(()=>el.scrollIntoView({block:'center'}), 80); }
   document.querySelectorAll('[data-sjrep]').forEach(b=>b.onclick=()=>{ fermer(); qxEditer(b.dataset.sjrep); });
+  { const ns = $('#sjns'); if(ns) ns.onchange = async ()=>{ const on = ns.checked; ns.disabled = true; const ok = await sujNosig(S0.first, on); ns.disabled = false; if(!ok) ns.checked = !on; }; }
   $('#mok').onclick = async ()=>{
     if(MODE!=='supabase' || !SB){ toast('Connectez-vous au compte administrateur pour publier.'); return; }
     const note = $('#sjn').value.trim() || null, W = [];
@@ -3303,7 +3307,7 @@ AFTER.contrib = ()=>{
     try{ const {error} = await SB.rpc('contrib_retirer_credit', {p_qid:qid, p_appareil:a}); if(error) throw error; toast('Crédit retiré.'); await ctCharger(); }catch(e){ toast('Impossible : '+(typeof frErr==='function'?frErr(e):e.message)); } });
 };
 /* « Signaler une erreur » désactivé pour certaines questions (déjà vérifiées) : réglage public.access.nosig, lu par l’appli */
-const nosigOn = qid => !!((DB.access.nosig||{})[qid]);
+const nosigOn = qid => !!((DB.access.nosig||{})[qid]) || nosigSuj(qid);
 function nosigSet(qid, on){ const N = DB.access.nosig = DB.access.nosig || {}; if(on) N[qid] = 1; else delete N[qid]; DB.access.version++; DB.access.misAJour = new Date().toISOString();
   audit(on ? '« Signaler une erreur » désactivé' : '« Signaler une erreur » réactivé', qid); persist(); toast(on ? '🚫 Les élèves ne pourront plus signaler cette question.' : '⚑ « Signaler une erreur » réactivé pour cette question.'); }
 /* ======================= OFFRES (écran unique : mode, verrous, formules, leviers, statistiques) =======================
@@ -3435,7 +3439,7 @@ AFTER.offres = () => {
   $('#ofsj').onchange = e=>{ OFS_J = +e.target.value||30; ofStatsCharger(); };
   if(OFS && MODE==='supabase'){ $('#ofstats').classList.remove('muted'); $('#ofstats').innerHTML = ofStatsHTML(OFS); }
   ofStatsCharger(); };
-function bindQedit(){ document.querySelectorAll('[data-qsuj]').forEach(b=>b.onclick=()=>qxSujDeQ(b.dataset.qsuj)); document.querySelectorAll('[data-qeval]').forEach(b=>b.onclick=()=>evPartager(b.dataset.qeval)); document.querySelectorAll('[data-nosig]').forEach(b=>b.onclick=()=>{ const q = b.dataset.nosig, on = !nosigOn(q); nosigSet(q, on); render(); }); document.querySelectorAll('[data-qedit]').forEach(b=>b.onclick=()=>qxEditer(b.dataset.qedit)); }
+function bindQedit(){ document.querySelectorAll('[data-qsuj]').forEach(b=>b.onclick=()=>qxSujDeQ(b.dataset.qsuj)); document.querySelectorAll('[data-qeval]').forEach(b=>b.onclick=()=>evPartager(b.dataset.qeval)); document.querySelectorAll('[data-nosig]').forEach(b=>b.onclick=()=>{ const q = b.dataset.nosig; if(nosigSuj(q) && !(DB.access.nosig||{})[q]){ toast('🚫 Le signalement est désactivé pour tout le sujet : réactivez-le dans « 📝 Modifier le sujet ».', 6000); return; } const on = !nosigOn(q); nosigSet(q, on); render(); }); document.querySelectorAll('[data-qedit]').forEach(b=>b.onclick=()=>qxEditer(b.dataset.qedit)); }
 /* ---------- 🔗 Faire évaluer une question signalée : lien secret vers evaluer.html, l'avis revient ici ----------
    SQL : supabase/correcteurs/3_evaluations_partagees.sql. Rien n'est publié tout seul : l'administrateur corrige. */
 const EV = {L:null, etat:'', ouv:false};
@@ -3552,13 +3556,14 @@ function qxEditer(qid, reps){
     <label class="lbl" for="qxe">Énoncé</label><textarea class="field" id="qxe" rows="3">${esc(q0.q||'')}</textarea>
     <div id="qxrep" style="margin-top:8px"></div>
     <label class="lbl" for="qxx">Explication</label>${rixBarre('qxx')}<textarea class="field" id="qxx" rows="3">${esc(q0.x||'')}</textarea><div id="qxxa" style="font-size:14px;margin-top:4px"></div><div id="qximg"></div>
-    <label class="row" style="gap:8px;margin-top:12px;cursor:pointer;padding:10px 12px;border-radius:12px;background:var(--soft,#f4f2fb)"><input type="checkbox" id="qxns" ${nosigOn(qid)?'checked':''} style="width:18px;height:18px"><span>🚫 <b>Désactiver « Signaler une erreur »</b> pour cette question (question vérifiée : les élèves ne verront plus le bouton) <span class="cnote">· enregistré tout de suite</span></span></label>
+    <label class="row" style="gap:8px;margin-top:12px;cursor:pointer;padding:10px 12px;border-radius:12px;background:var(--soft,#f4f2fb)"><input type="checkbox" id="qxns" ${nosigOn(qid)?'checked':''} ${nosigSuj(qid)&&!(DB.access.nosig||{})[qid]?'disabled':''} style="width:18px;height:18px"><span>🚫 <b>Désactiver « Signaler une erreur »</b> pour cette question (question vérifiée : les élèves ne verront plus le bouton) <span class="cnote">· ${nosigSuj(qid)?'déjà désactivé pour tout le sujet (📝 Modifier le sujet)':'enregistré tout de suite'}</span></span></label>
+    <div id="qxvox" style="margin-top:12px;padding:12px;border-radius:12px;border:2px solid #CFE3FB;background:#F5FAFF"></div>
     <label class="row" style="gap:8px;margin-top:8px;cursor:pointer;padding:10px 12px;border-radius:12px;background:#fdf2f2"><input type="checkbox" id="qxoff" ${q0.off?'checked':''} style="width:18px;height:18px"><span>🙈 <b>Désactiver cette question</b> : elle disparaît chez les élèves (site élèves et site test), elle reste dans l’éditeur et ici</span></label>
     <label class="lbl" for="qxn">Ce qui a été corrigé (pour vous, facultatif)</label><input class="field" id="qxn" maxlength="200" placeholder="Ex. bonne réponse C au lieu de B">
     ${R.length?`<label class="row" style="gap:8px;margin-top:10px;cursor:pointer"><input type="checkbox" id="qxpre" checked style="width:18px;height:18px"><span>✉️ Prévenir ${R.length>1?`les <b>${R.length}</b> élèves qui ont signalé`:'l’élève qui a signalé'} cette question (« ✅ Réponse corrigée »)</span></label>`:''}
     <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="mno">Annuler</button><button class="btn pri" id="mok">Publier la correction</button></div>`);
   $('#modal').style.width = 'min(760px,calc(100% - 28px))';
-  $('#qxns').onchange = e=>nosigSet(qid, e.target.checked);
+  $('#qxns').onchange = e=>nosigSet(qid, e.target.checked); voxEditeur(qid, $('#qxvox'));
   draw(); drawImg(); rixBind($('#modal')); rixApercu($('#qxx'), $('#qxxa')); $('#qxt').onchange = e=>{ T = e.target.value; if(T==='qcm' && OP.length<2) OP = [{t:'',ok:false},{t:'',ok:false}]; draw(); };
   const fermer = ()=>{ $('#modal').style.width = ''; closeModal(); };
   { const bs = $('#qxsuj'); if(bs) bs.onclick = ()=>{ fermer(); qxSujDeQ(qid); }; }
@@ -3996,6 +4001,124 @@ async function enterSupabase(){
     render();
   }catch(e){ showProblem('Connexion impossible', esc(frErr(e))); }
 }
+
+/* =======================================================================================================
+   🎙️ NOTES VOCALES SOUS LES QUESTIONS (SQL : supabase/notes_vocales/1_notes_vocales.sql)
+   La note publiée d'une question est le champ « au » de sa correction (adresse publique du stockage
+   « notes-vocales ») : l'appli des élèves la lit après la réponse (élèves Premium). Sans note, l'appli fait
+   lire l'explication écrite par la voix du téléphone. Les notes proposées par les correcteurs arrivent dans
+   « notes-vocales-attente » (privé) et attendent ici « ✅ Accepter » (copie publique + publication) ou « ✕ Refuser ».
+   ======================================================================================================= */
+const VOX = {};                     /* état de l'enregistrement par question */
+const VXA = {etat:'', L:[], url:{}};/* notes en attente des correcteurs */
+const VOX_EXT = {'audio/webm':'webm','audio/ogg':'ogg','audio/mpeg':'mp3','audio/mp4':'m4a','audio/aac':'aac','audio/x-m4a':'m4a','audio/m4a':'m4a','audio/wav':'wav','audio/x-wav':'wav'};
+const VOX_TYPE = {webm:'audio/webm',ogg:'audio/ogg',mp3:'audio/mpeg',m4a:'audio/mp4',aac:'audio/aac',wav:'audio/wav'};
+const voxSql = e => /bucket|notes_vocales|note_vocale|function|schema cache/i.test(String((e&&e.message)||e||''));
+const voxMsgErr = e => voxSql(e) ? 'Collez d’abord supabase/notes_vocales/1_notes_vocales.sql dans Supabase (SQL Editor).' : 'Impossible : '+(typeof frErr==='function'?frErr(e):(e&&e.message)||e);
+function voxAu(qid){ const c = (QX.corr||[]).find(x=>x.actif && x.qid===qid);
+  if(c) return c.c && typeof c.c.au==='string' ? c.c.au : '';
+  const q = typeof qxQ==='function' ? qxQ(qid) : null; return q && typeof q.au==='string' ? q.au : ''; }
+async function voxEnvoyer(qid, blob){
+  if(MODE!=='supabase' || !SB) throw new Error('Connectez-vous au compte administrateur.');
+  if(blob.size > 6*1024*1024) throw new Error('Fichier trop lourd : 6 Mo au plus (environ 6 minutes).');
+  const ty = String(blob.type||'').split(';')[0], ext = VOX_EXT[ty]; if(!ext) throw new Error('Format audio non accepté ('+(ty||'inconnu')+') : mp3, m4a, ogg, webm ou wav.');
+  const dest = String(qid).replace(/[^A-Za-z0-9._-]/g,'_') + '/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.' + ext;
+  const up = await SB.storage.from('notes-vocales').upload(dest, blob, {contentType:ty, upsert:false, cacheControl:'31536000'}); if(up.error) throw up.error;
+  return SB.storage.from('notes-vocales').getPublicUrl(dest).data.publicUrl; }
+function voxChemin(au){ const m = /\/storage\/v1\/object\/public\/notes-vocales\/(.+)$/.exec(String(au||'')); return m ? decodeURIComponent(m[1]) : null; }
+async function voxPublier(qid, au, msg){
+  if(MODE!=='supabase' || !SB) throw new Error('Connectez-vous au compte administrateur.');
+  try{ const {data,error} = await SB.rpc('corrections_liste'); if(!error && Array.isArray(data)) QX.corr = data; }catch(e){}
+  const c = (QX.corr||[]).find(x=>x.actif && x.qid===qid), ch = Object.assign({}, c && c.c && typeof c.c==='object' ? c.c : {}), avant = ch.au;
+  if(au) ch.au = au; else delete ch.au;
+  const r = Object.keys(ch).length ? await SB.rpc('publier_correction', {p_qid:qid, p_champs:ch, p_note:msg||null}) : await SB.rpc('annuler_correction', {p_qid:qid});
+  if(r.error || (r.data && r.data.ok===false)) throw r.error || new Error('Correction refusée.');
+  try{ const {data} = await SB.rpc('corrections_liste'); if(Array.isArray(data)) QX.corr = data; }catch(e){}
+  if(avant && avant!==au){ const p = voxChemin(avant); if(p) SB.storage.from('notes-vocales').remove([p]).catch(()=>{}); }   /* ancien fichier : supprimé (sans bloquer) */
+  audit(msg, qid); }
+function voxDuree(s){ s = Math.max(0, Math.round(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function voxEditeur(qid, z){ if(!z) return; const st = VOX[qid] = VOX[qid] || {}, au = voxAu(qid);
+  const dessiner = ()=>{ const au = voxAu(qid);
+    z.innerHTML = `<div style="font-weight:800;margin-bottom:4px">🎙️ Note vocale sous la question</div>
+      <div class="cnote" style="margin-bottom:8px">Écoutée par les élèves Premium après leur réponse. ${au?'':'Sans note enregistrée, ils peuvent faire lire l’explication écrite par la voix de leur téléphone.'} <b>Enregistré tout de suite</b> (indépendant de « Publier la correction »).</div>
+      ${au?`<div class="cnote">✅ Note publiée :</div><audio controls preload="none" src="${esc(au)}" style="width:100%;margin:4px 0"></audio><button type="button" class="btn sm" id="vxdel">🗑️ Retirer la note</button>`:''}
+      <div class="row" style="gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button type="button" class="btn sm ${st.rec?'pri':''}" id="vxrec">${st.rec?'⏹️ Arrêter · '+voxDuree((Date.now()-st.t0)/1000):'⏺️ Enregistrer'+(au?' une nouvelle note':'')}</button>
+        <label class="btn sm" style="cursor:pointer;margin:0">📁 Choisir un fichier audio<input type="file" id="vxfile" accept="audio/*" style="display:none"></label></div>
+      ${st.blob?`<div style="margin-top:10px;padding:10px;border-radius:12px;background:var(--soft,#f4f2fb)"><div class="cnote">Aperçu${st.duree?' · '+voxDuree(st.duree):''} · ${Math.max(1,Math.round(st.blob.size/1024))} Ko :</div><audio controls src="${st.url}" style="width:100%;margin:4px 0"></audio>
+        <div class="row" style="gap:8px"><button type="button" class="btn sm pri" id="vxpub">✅ Publier cette note</button><button type="button" class="btn sm" id="vxann">✕ Annuler</button></div></div>`:''}`;
+    const rec = z.querySelector('#vxrec');
+    rec.onclick = async ()=>{
+      if(st.rec){ try{ st.rec.stop(); }catch(e){} return; }
+      if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder==='undefined'){ toast('Enregistrement impossible sur ce navigateur : choisissez un fichier audio.'); return; }
+      let flux; try{ flux = await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ toast('Micro refusé : autorisez le micro pour ce site, ou choisissez un fichier audio.', 6000); return; }
+      const ty = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+      const R = new MediaRecorder(flux, ty?{mimeType:ty, audioBitsPerSecond:48000}:undefined), P = [];
+      R.ondataavailable = e=>{ if(e.data && e.data.size) P.push(e.data); };
+      R.onstop = ()=>{ flux.getTracks().forEach(t=>t.stop()); clearInterval(st.tim); st.duree = (Date.now()-st.t0)/1000; st.rec = null;
+        const b = new Blob(P, {type:String(R.mimeType||ty||'audio/webm').split(';')[0]}); if(st.url) URL.revokeObjectURL(st.url); st.blob = b; st.url = URL.createObjectURL(b); dessiner(); };
+      st.rec = R; st.t0 = Date.now(); R.start(1000);
+      st.tim = setInterval(()=>{ const b = z.querySelector('#vxrec'); if(b && st.rec) b.textContent = '⏹️ Arrêter · '+voxDuree((Date.now()-st.t0)/1000); if(st.rec && Date.now()-st.t0 > 5*60e3) st.rec.stop(); }, 500);
+      dessiner(); };
+    const fi = z.querySelector('#vxfile'); fi.onchange = ()=>{ const f = fi.files && fi.files[0]; if(!f) return;
+      if(f.size > 6*1024*1024){ toast('Fichier trop lourd : 6 Mo au plus.'); return; }
+      let ty = String(f.type||'').split(';')[0]; if(!VOX_EXT[ty]){ const e = (/\.([a-z0-9]+)$/i.exec(f.name)||[])[1]; ty = VOX_TYPE[String(e||'').toLowerCase()] || ty; }
+      if(!VOX_EXT[ty]){ toast('Format non accepté : mp3, m4a, ogg, webm ou wav.'); return; }
+      if(st.url) URL.revokeObjectURL(st.url); st.blob = new Blob([f], {type:ty}); st.url = URL.createObjectURL(st.blob); st.duree = 0; dessiner(); };
+    const pub = z.querySelector('#vxpub'); if(pub) pub.onclick = async ()=>{ pub.disabled = true; pub.textContent = '⏳ Envoi…';
+      try{ const url = await voxEnvoyer(qid, st.blob); await voxPublier(qid, url, 'Note vocale publiée'); URL.revokeObjectURL(st.url); delete VOX[qid].blob; delete VOX[qid].url;
+        toast('🎙️ Note vocale publiée : les élèves Premium l’entendent à leur prochaine ouverture.', 5000); dessiner(); }
+      catch(e){ pub.disabled = false; pub.textContent = '✅ Publier cette note'; toast(voxMsgErr(e), 7000); } };
+    const ann = z.querySelector('#vxann'); if(ann) ann.onclick = ()=>{ if(st.url) URL.revokeObjectURL(st.url); delete st.blob; delete st.url; dessiner(); };
+    const del = z.querySelector('#vxdel'); if(del) del.onclick = ()=>{ if(!confirm('Retirer la note vocale de cette question ?')) return; del.disabled = true;
+      voxPublier(qid, null, 'Note vocale retirée').then(()=>{ toast('🗑️ Note vocale retirée.'); dessiner(); }).catch(e=>{ del.disabled = false; toast(voxMsgErr(e), 7000); }); };
+  };
+  dessiner(); }
+
+/* ---- notes proposées par les correcteurs : en haut de la page « Questions » ---- */
+async function voxAttenteCharger(force){
+  if(MODE!=='supabase' || !SB) return; if(VXA.etat==='charge' || (VXA.etat && !force && Date.now()-VXA.t < 60e3)) return;
+  VXA.etat = 'charge';
+  try{ const {data, error} = await SB.rpc('notes_vocales_liste'); if(error) throw error; VXA.L = Array.isArray(data) ? data : []; VXA.etat = 'ok'; }
+  catch(e){ VXA.L = []; VXA.etat = voxSql(e) ? 'sql' : 'err'; }
+  VXA.t = Date.now(); if(page==='questions') render(); }
+function voxAttenteCarte(){
+  if(MODE==='supabase' && SB && !VXA.etat) setTimeout(()=>voxAttenteCharger(), 0);
+  if(VXA.etat!=='ok' || !VXA.L.length) return '';
+  return `<div class="card" id="vxacard" style="margin-bottom:14px;border:2px solid #2B7BD8"><h3 style="margin:0 0 4px">🎙️ Notes vocales proposées par les correcteurs · ${VXA.L.length}</h3>
+    <p class="cnote" style="margin:0 0 8px">Écoutez puis « ✅ Accepter » : la note est copiée dans le stockage public et publiée sous la question (élèves Premium, après leur réponse). Une note déjà publiée pour la question est remplacée.</p>
+    ${VXA.L.map(n=>{ const q = QX.etat==='ok' ? qxQ(n.qid) : null;
+      return `<div style="padding:10px 0;border-top:1px solid var(--line)"><div style="font-size:14px"><b>${esc((q&&q.q||n.qid).slice(0,180))}</b></div>
+        <div class="cnote">${esc(n.nom||n.auteur||'')} · ${esc(new Date(n.cree).toLocaleString('fr-FR'))}${n.duree?' · '+voxDuree(n.duree):''} · ${esc(n.qid)}${voxAu(n.qid)?' · ⚠️ la question a déjà une note publiée':''}</div>
+        <audio controls preload="none" data-vxa="${esc(n.id)}" style="width:100%;margin:6px 0"></audio>
+        <div class="row" style="gap:8px"><button class="btn sm pri" data-vxok="${esc(n.id)}">✅ Accepter et publier</button><button class="btn sm" data-vxko="${esc(n.id)}">✕ Refuser</button>${q?`<button class="btn sm" data-qedit="${esc(n.qid)}">✏️ Voir la question</button>`:''}</div></div>`; }).join('')}</div>`; }
+function voxAttenteBind(){
+  const c = $('#vxacard'); if(!c) return;
+  c.querySelectorAll('audio[data-vxa]').forEach(async a=>{ const n = VXA.L.find(x=>x.id===a.dataset.vxa); if(!n) return;
+    const u = VXA.url[n.id]; if(u && u.t > Date.now()-50*60e3){ a.src = u.u; return; }
+    try{ const {data} = await SB.storage.from('notes-vocales-attente').createSignedUrl(n.chemin, 3600); if(data){ VXA.url[n.id] = {u:data.signedUrl, t:Date.now()}; a.src = data.signedUrl; } }catch(e){} });
+  c.querySelectorAll('[data-qedit]').forEach(b=>b.onclick=()=>qxEditer(b.dataset.qedit));
+  c.querySelectorAll('[data-vxok]').forEach(b=>b.onclick=async()=>{ const n = VXA.L.find(x=>x.id===b.dataset.vxok); if(!n) return; b.disabled = true; b.textContent = '⏳ Publication…';
+    try{ const dl = await SB.storage.from('notes-vocales-attente').download(n.chemin); if(dl.error) throw dl.error;
+      const e = (/\.([a-z0-9]+)$/i.exec(n.chemin)||[])[1], ty = VOX_TYPE[String(e||'').toLowerCase()] || String(dl.data.type||'').split(';')[0];
+      const url = await voxEnvoyer(n.qid, new Blob([dl.data], {type:ty}));
+      await voxPublier(n.qid, url, 'Note vocale de '+(n.nom||n.auteur)+' acceptée');
+      const r = await SB.rpc('note_vocale_traiter', {p_id:n.id, p_statut:'acceptee'}); if(r.error) throw r.error;
+      SB.storage.from('notes-vocales-attente').remove([n.chemin]).catch(()=>{});
+      VXA.L = VXA.L.filter(x=>x.id!==n.id); toast('🎙️ Note acceptée et publiée.', 5000); render(); }
+    catch(e){ b.disabled = false; b.textContent = '✅ Accepter et publier'; toast(voxMsgErr(e), 7000); } });
+  c.querySelectorAll('[data-vxko]').forEach(b=>b.onclick=async()=>{ const n = VXA.L.find(x=>x.id===b.dataset.vxko); if(!n || !confirm('Refuser cette note vocale ?')) return; b.disabled = true;
+    try{ const r = await SB.rpc('note_vocale_traiter', {p_id:n.id, p_statut:'refusee'}); if(r.error) throw r.error; audit('Note vocale de '+(n.nom||n.auteur)+' refusée', n.qid);
+      SB.storage.from('notes-vocales-attente').remove([n.chemin]).catch(()=>{}); VXA.L = VXA.L.filter(x=>x.id!==n.id); toast('Note refusée.'); render(); }
+    catch(e){ b.disabled = false; toast(voxMsgErr(e), 7000); } }); }
+{ const _vq = VIEWS.questions; VIEWS.questions = function(){ return voxAttenteCarte() + _vq.apply(this, arguments); };
+  const _aq = AFTER.questions; AFTER.questions = function(){ const r = _aq ? _aq.apply(this, arguments) : undefined; try{ voxAttenteBind(); }catch(e){} return r; }; }
+
+/* ---- « Signaler une erreur » désactivé pour un sujet entier : drapeau nosig de la correction « suj:<1re question> » ---- */
+function nosigSuj(qid){ try{ if(QX.etat!=='ok') return false; const z = qxSujDe(qid); if(!z) return false; const S0 = qxSujets(z.m)[z.k]; return !!(S0 && sujDrapeaux(S0.first).nosig); }catch(e){ return false; } }
+async function sujNosig(first, on){ const ok = await sujMarquer(first, {nosig:on?1:null}, on?'« Signaler une erreur » désactivé pour le sujet':'« Signaler une erreur » réactivé pour le sujet');
+  if(ok) toast(on?'🚫 Les élèves ne peuvent plus signaler les questions de ce sujet (à leur prochaine ouverture).':'⚑ Les élèves peuvent de nouveau signaler les questions de ce sujet.', 5000);
+  return ok; }
 
 /* =========================================================
    16. DÉMARRAGE
