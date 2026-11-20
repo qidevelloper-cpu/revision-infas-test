@@ -4164,13 +4164,16 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
    Une question peut avoir une note enregistrée : champ « au » de sa correction (adresse publique du stockage Supabase
    « notes-vocales », publiée depuis le tableau de bord, ou proposée par un correcteur puis validée par l'administrateur).
    Sinon, la voix du téléphone lit l'explication écrite (speechSynthesis, en français, sans données ni connexion).
-   Réservé aux élèves Premium (un réglage « fonction:notes-vocales » du tableau de bord, s'il existe, l'emporte) ;
-   les autres voient le bouton avec 🔒, qui ouvre l'offre Premium. Studio / éditeur : toujours visible. */
+   Gratuit par défaut ; tableau de bord › Contenu et accès › « Écoute des explications » : Premium (les autres voient le
+   bouton avec 🔒, qui ouvre l'offre Premium) ou Masqué (pas de bouton). Studio / éditeur : toujours visible. */
 (function(){
  const PFX=()=>String(RIC.url||'')+'/storage/v1/object/public/notes-vocales/';
  const auOk=u=>typeof u==='string'&&!!RIC.url&&u.startsWith(PFX())&&!u.includes('..')&&/^[A-Za-z0-9._\/@%+-]+$/.test(u.slice(PFX().length));
  const ttsOk=()=>typeof window.speechSynthesis!=='undefined'&&typeof window.SpeechSynthesisUtterance!=='undefined';
- const droit=()=>{if(RIC.off())return true;const R=(RIC.cfg&&RIC.cfg.regles)||{};if(R['fonction:notes-vocales'])return RIC.can('fonction:notes-vocales');return RIC.isPremium()};
+ /* accès : GRATUIT tant que le tableau de bord n'a pas de règle « fonction:notes-vocales » ; Premium ou Masqué si Daniel le choisit */
+ const regle=()=>{const R=(RIC.cfg&&RIC.cfg.regles)||{};return R['fonction:notes-vocales']?RIC.effective('fonction:notes-vocales'):'gratuit'};
+ const droit=()=>{if(RIC.off())return true;const e=regle();if(e==='gratuit')return true;if(e==='masque')return false;return RIC.isPremium()};
+ const cache=()=>!RIC.off()&&regle()==='masque';
  function texte(q){let x=typeof riXtxt==='function'?riXtxt(q.x||''):String(q.x||'');
   x=x.split('\n').filter(l=>!/^\s*(Sources?|Source externe[^:]*)\s*:/i.test(l)).join('\n');
   return x.replace(/‰/g,' pour mille').replace(/\s+/g,' ').trim()}
@@ -4199,7 +4202,7 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
   vit,
   verrou(){RIC.paywall('fonction:notes-vocales',Tx('vox.prem','Notes vocales · Premium'))},
   bloc,auOk};
- function bloc(qid){const q=QI[qid];if(!q)return'';const rec=auOk(q.au),tts=ttsOk()&&!!texte(q);if(!rec&&!tts)return'';
+ function bloc(qid){const q=QI[qid];if(!q||cache())return'';const rec=auOk(q.au),tts=ttsOk()&&!!texte(q);if(!rec&&!tts)return'';
   if(!droit())return`<div class="ri-vox lock"><button type="button" class="ri-vox-b" onclick="riVox.verrou()">🔊 ${esc(Tx('vox.lire','Écouter l’explication'))} <span class="ri-vox-p">🔒 Premium</span></button></div>`;
   const V=`<div class="ri-vox-v" role="group" aria-label="${esc(Tx('vox.vit','Vitesse'))}"><span>${esc(Tx('vox.vit','Vitesse'))}</span>${VIT.map(v=>`<button type="button" class="ri-vox-r" data-v="${v}" onclick="riVox.vitesse(${v})">${vitTxt(v)}</button>`).join('')}</div>`;
   if(rec)return`<div class="ri-vox"><div class="ri-vox-h">🎙️ ${esc(Tx('vox.note','Note vocale de l’enseignant'))}</div><audio class="ri-vox-au" controls preload="none" src="${esc(q.au)}" onplay="riVox.stop();this.playbackRate=riVox.vit()" onloadedmetadata="this.playbackRate=riVox.vit()"></audio>${V}</div>`;
@@ -4234,5 +4237,30 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
   if(!M){M=PM[mid]={};try{sujets(mid).forEach(L=>{if(L&&L[0])L.forEach(id=>{if(!(id in M))M[id]=L[0]})})}catch(e){}}return M[qid]}
  window.riNosig=function(qid){const N=(typeof RIC!=='undefined'&&RIC.cfg&&RIC.cfg.nosig)||{};if(N[qid])return true;const D=drap();if(!Object.keys(D).length)return false;
   const q=QI[qid];if(!q)return false;const f=premiere(q.m,qid);return !!(f&&D[f])};
+})();
+/* ---------- IMAGES MASQUÉES (demande de Daniel, 20/11/2026) ----------
+   Images retirées de l'appli SANS les effacer des données (blocs protégés intacts) : pour annuler, retirer la clé
+   de RI_IMG_MASQUEES. Portail : galeries « Images & schémas » (resOf) et images des questions. Appli d'origine :
+   avant affichage, les planches correspondantes sont retirées de sa galerie et des listes d'images de ses chapitres
+   (le texte des chapitres reste). SANTE INFANTILE : les 73 pages du livre « L'essentiel en Pédiatrie tropicale »
+   (choisies dans sante_infantile_images_retirees_73.html). */
+const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2", "xxmvkq5cba_3", "xxmvkq5cba_4", "xxmvkq5cba_5", "xxmvkq5cba_6", "xxmvkq5cba_7", "xxmvkq5cba_8", "xxmvkq5cba_9", "xxmvkq5cba_10", "xxmvkq5cba_11", "xxmvkq5cba_12", "xxmvkq5cba_13", "xxmvkq5cba_14", "xxmvkq5cba_15", "xxmvkq5cba_16", "xxmvkq5cba_17", "xxmvkq5cba_18", "xxmvkq5cba_19", "xxmvkq5cba_20", "xxmvkq5cba_21", "xxmvkq5cba_22", "xxmvkq5cba_23", "xxmvkq5cba_24", "xxmvkq5cba_25", "xxmvkq5cba_26", "xxmvkq5cba_27", "xxmvkq5cba_28", "xxmvkq5cba_29", "xxmvkq5cba_30", "xxmvkq5cba_31", "xxmvkq5cba_32", "xxmvkq5cba_33", "xxmvkq5cba_34", "xxmvkq5cba_35", "xxmvkq5cba_36", "xxmvkq5cba_37", "xxmvkq5cba_38", "xxmvkq5cba_39", "xxmvkq5cba_40", "xxmvkq5cba_41", "xxmvkq5cba_42", "xxmvkq5cba_43", "xxmvkq5cba_44", "xxmvkq5cba_45", "xxmvkq5cba_46", "xxmvkq5cba_47", "xxmvkq5cba_48", "xxmvkq5cba_49", "xxmvkq5cba_50", "xxmvkq5cba_51", "xxmvkq5cba_52", "xxmvkq5cba_53", "xxmvkq5cba_54", "xxmvkq5cba_55", "xxmvkq5cba_56", "xxmvkq5cba_57", "xxmvkq5cba_58", "xxmvkq5cba_59", "xxmvkq5cba_60", "xxmvkq5cba_61", "xxmvkq5cba_62", "xxmvkq5cba_63", "xxmvkq5cba_64", "xxmvkq5cba_65", "xxmvkq5cba_66", "xxmvkq5cba_67", "xxmvkq5cba_68", "xxmvkq5cba_69", "xxmvkq5cba_70", "xxmvkq5cba_71", "xxmvkq5cba_72"]};
+(function(){const M=new Set([].concat(...Object.values(RI_IMG_MASQUEES)));if(!M.size)return;
+ /* Studio / éditeur : rien n'est masqué (il ne doit jamais enregistrer des données amputées) */
+ const libre=()=>(typeof EDITMODE!=='undefined'&&EDITMODE)||!!window.PORTAIL_EDITOR;
+ /* données du cours chargées dans le téléphone (pas les fichiers sources) : entrées retirées une fois, à chaque rendu si besoin */
+ function masquer(){if(libre())return;Object.keys(RI_IMG_MASQUEES).forEach(mid=>{const R=DATA.res&&DATA.res[mid];
+   if(R&&!R.__riMasq&&Array.isArray(R.ch)&&R.ch.length){R.ch.forEach(c=>{if(c&&Array.isArray(c.imgs))c.imgs=c.imgs.filter(x=>!M.has(String(x&&x[0])))});R.__riMasq=1;try{const k=CAPS&&CAPS[mid];if(k)delete CAPS[mid]}catch(e){}}
+   (QBM[mid]||[]).forEach(q=>{if(q.img!=null&&M.has(String(q.img)))delete q.img})})}
+ const _ac=applyContent;applyContent=function(){const x=_ac.apply(this,arguments);try{masquer()}catch(e){}return x};
+ const _rd=render;render=function(){try{masquer()}catch(e){}return _rd.apply(this,arguments)};
+ /* appli d'origine : le source contient encore « @@XIMG:<clé>@@ » avant unesc() */
+ window.riMasqueApp=function(t){if(typeof t!=='string'||t.indexOf('@@XIMG:')<0)return t;const ids=[];
+  t.replace(/"([A-Za-z0-9_]+)":"@@XIMG:(\w+)@@"/g,(x,id,k)=>{if(M.has(k))ids.push(id);return x});if(!ids.length)return t;
+  const alt=ids.map(s=>s.replace(/[^A-Za-z0-9_]/g,'')).join('|');
+  t=t.replace(new RegExp('(,?)\\{"id":"(?:'+alt+')"[^{}]*\\}(,?)','g'),(x,a,b)=>a&&b?',':'');
+  const S=new Set(ids);t=t.replace(/"imgs":\[([^\]]*)\]/g,(x,L)=>{if(!L)return x;const it=L.split(',');const k=it.filter(s=>!S.has(s.trim().replace(/^"|"$/g,'')));return k.length===it.length?x:'"imgs":['+k.join(',')+']'});
+  return t};
+ const _un=unesc;unesc=function(t){return _un.call(this,libre()?t:riMasqueApp(t))};
 })();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

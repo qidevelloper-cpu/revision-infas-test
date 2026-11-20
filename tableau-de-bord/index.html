@@ -498,6 +498,7 @@ let CATALOGUE = [{"id": "de", "nom": "Sujets D.E", "matieres": [{"id": "xmvkq4ze
 const FONCTIONS = [
   {id:'explications', nom:'Explications après chaque réponse', d:'Explication, image, technique de mémorisation et « à retenir »'},
   {id:'flashcards', nom:'Flashcards', d:'Cartes de révision de chaque matière'},
+  {id:'notes-vocales', nom:'Écoute des explications (notes vocales)', d:'🔊 Lecture de l’explication par la voix du téléphone et notes enregistrées, avec vitesse 1× à 2×. Gratuite tant qu’aucun réglage n’est choisi ici'},
 ];
 const FILIERES = ['SF','IDE'];
 const ANNEES = ['L1','L2','L3'];
@@ -3716,7 +3717,11 @@ async function chargerCompos(){ if(MODE!=='supabase'||!SB){ CPS=null; return; } 
 function cpNomCours(mid){ const c=CP_CAT[cpBase()]; const m=c&&c.L.find(x=>x.id===mid); return m?m.nom:mid; }
 function cpTexte(c){ const dl=c.date_limite?`\n📅 DATE LIMITE de la composition : ${dfr(c.date_limite,{weekday:'long',day:'numeric',month:'long'})} à ${hfr(c.date_limite)}`:'';
   return `📝 Composition Révision INFAS${c.titre?' : '+c.titre:''}\n${cpNomCours(c.mid)} · ${c.sujet_titre||'Sujet '+(c.k+1)}${c.chrono_min?'\n⏱ '+c.chrono_min+' minutes':''}${dl}${c.recompo?'\n🔄 Tu peux recomposer plusieurs fois avec ce lien':''}\nTouche ce lien pour composer : ${cpLien(c.code)}`; }
-function cpTitreSujet(s){ return String(s&&s.t||'Sujet '+((s&&s.k||0)+1)).toLocaleUpperCase('fr-FR').replace(/\s+/g,' ').trim().slice(0,120); }
+/* titre d'une compo = nom du sujet en MAJUSCULES ; sujet sans nom propre (vide ou « Sujet 2 ») : précédé du nom du cours
+   (« DOCUMENT DE REVISION CHIRURGIE · SUJET 2 » si le cours est choisi dans « Document de révision ») */
+function cpTitreSujet(s, cours){ const n = s&&s.t ? String(s.t) : 'Sujet '+((s&&s.k||0)+1), gen = !s||!s.t||/^sujet\s*\d+$/i.test(n.trim());
+  const t = gen && cours ? cours+' · '+n : n;
+  return String(t).toLocaleUpperCase('fr-FR').replace(/\s+/g,' ').trim().slice(0,120); }
 function cpEtat(c){ if(!c.actif) return ['Close','bad']; if(c.date_limite&&new Date(c.date_limite)<new Date()) return ['Terminée','bad']; return ['Ouverte','ok']; }
 const cpDuree = s=>s==null?'—':(s>=60?Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s':s+' s');
 
@@ -3772,7 +3777,8 @@ AFTER.compos = ()=>{
   const lire = ()=>{ if($('#cpmid')) f.mid=$('#cpmid').value; if($('#cpk')) f.k=$('#cpk').value; if($('#cptitre')) f.titre=$('#cptitre').value; if($('#cpchrono')) f.chrono=$('#cpchrono').value; if($('#cpdl')) f.dl=$('#cpdl').value; if($('#cprecomp')) f.recompo=$('#cprecomp').checked; };
   /* titre de la compo = nom du sujet choisi, en MAJUSCULES (tant que l'administrateur ne l'a pas changé à la main) */
   const titreAuto = ()=>{ const cat=CP_CAT[cpBase()], m=cat&&cat.ok&&(cat.L.find(x=>x.id===String(f.mid||'').replace(/^doc\|/,''))||cat.L[0]); const kk=$('#cpk')?+$('#cpk').value:+f.k||0;
-    const s=m&&m.sujets.find(x=>x.k===kk); return s?cpTitreSujet(s):''; };
+    const s=m&&m.sujets.find(x=>x.k===kk); return s?cpTitreSujet(s,cpCoursNom(m)):''; };
+  const cpCoursNom = m=>m ? (String(f.mid||'').startsWith('doc|')&&m.doc ? m.doc : m.nom) : '';
   const majTitre = ()=>{ const i=$('#cptitre'); if(!i) return; if(f.titreMain && String(f.titre||'').trim()) return; const t=titreAuto(); i.value=t; f.titre=t; f.titreMain=false; };
   if($('#cptitre')){ $('#cptitre').oninput=()=>{ f.titre=$('#cptitre').value; f.titreMain = !!f.titre.trim() && f.titre!==titreAuto(); }; majTitre(); }
   if($('#cpk')) $('#cpk').onchange=()=>{ f.k=$('#cpk').value; majTitre(); };
@@ -3788,7 +3794,7 @@ AFTER.compos = ()=>{
     if(chrono!=null&&!(chrono>=1&&chrono<=600)){ toast('Chronomètre : entre 1 et 600 minutes.'); return; }
     const dl=f.dl?new Date(f.dl):null; if(dl&&!(dl>new Date())){ toast('La date limite doit être dans le futur.'); return; }
     $('#cpgo').disabled=true;
-    try{ const args={p_titre:((f.titre||'').trim()||cpTitreSujet(s.t?s:{k})), p_mid:m.id, p_k:k, p_sujet_titre:s.t||'', p_mode:f.mode||'gratuit', p_chrono_min:chrono, p_date_limite:dl?dl.toISOString():null};
+    try{ const args={p_titre:((f.titre||'').trim()||cpTitreSujet(s.t?s:{k},cpCoursNom(m))), p_mid:m.id, p_k:k, p_sujet_titre:s.t||'', p_mode:f.mode||'gratuit', p_chrono_min:chrono, p_date_limite:dl?dl.toISOString():null};
       if(f.recompo) args.p_recompo=true;
       const {data,error}=await SB.rpc('compo_creer',args); if(error){ if(f.recompo && /function|PGRST|404|schema/i.test(String(error.message||error))) throw new Error('Collez d’abord supabase/compos/2_recomposer.sql dans Supabase (option « Recomposer »).'); throw error; } if(!data||!data.ok) throw new Error('Création refusée ('+(data&&data.raison||'?')+').');
       CP_NEUF={code:data.code, titre:args.p_titre, mid:m.id, k, sujet_titre:args.p_sujet_titre, mode:args.p_mode, chrono_min:chrono, date_limite:args.p_date_limite, recompo:!!f.recompo};
