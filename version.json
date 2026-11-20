@@ -1,10 +1,10 @@
 {
- "v": "1e5ad694d4",
+ "v": "95a64fddcc",
  "date": "2026-11-20",
- "sig": "39b4e9d9dc09655e82319657b61469fee6e3869d",
+ "sig": "be5687e94b1f0dbf0161849683a9f9575fb1f649",
  "notes": [
   {
-   "t": "🔊 Écoute les explications à voix haute"
+   "t": "Nouvelle mise à jour"
   }
  ],
  "mats": {
@@ -111,11 +111,11 @@
  },
  "hist": [
   {
-   "v": "1e5ad694d4",
+   "v": "95a64fddcc",
    "date": "2026-11-20",
    "notes": [
     {
-     "t": "🔊 Écoute les explications à voix haute"
+     "t": "Nouvelle mise à jour"
     }
    ]
   },
@@ -243,6 +243,5 @@
  ],
  "moteur": 2,
  "format": 2,
- "oblig": 1,
- "auto": 2
+ "auto": 3
 }
