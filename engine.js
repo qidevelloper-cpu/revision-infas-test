@@ -3266,7 +3266,8 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
   if(d.deja){LS.set(PK,'');C={code:d.code,mid:d.mid,k};message(T('cp.deja.h','✅ Compo déjà effectuée'),(d.titre?'<b>'+esc(d.titre)+'</b><br>':'')+T('cp.deja','Tu as déjà effectué cette composition sur ce téléphone.')+ouHTML(d.mid,k));return}
   const ids=L[k].filter(id=>QI[id]&&!(typeof isNC==='function'&&isNC(QI[id])));
   const dec=Date.parse(d.maintenant)?Date.parse(d.maintenant)-Date.now():0;
-  C={code:d.code,titre:d.titre||'',mid:d.mid,k,mode:d.mode||'gratuit',chrono_min:d.chrono_min||0,fin:d.date_limite?Date.parse(d.date_limite)-dec:0,ids,sujet:sujTitre(d.mid,k)};
+  C={code:d.code,titre:d.titre||'',mid:d.mid,k,mode:d.mode||'gratuit',chrono_min:d.chrono_min||0,fin:d.date_limite?Date.parse(d.date_limite)-dec:0,ids,sujet:sujTitre(d.mid,k),
+   v2:'recompo' in d,recompo:!!d.recompo,essais:+d.essais||0,meilleure:d.meilleure!=null?+d.meilleure:null};
   presenter()}
  function presenter(){const m=MATI[C.mid],nom=String(LS.get(NK,'')||S.name||'').trim();
   const mode=C.mode==='gratuit'?T('cp.m.g','🎁 Composition gratuite : réponses et explications ouvertes'):C.mode==='reponses'?T('cp.m.r','🎁 Réponses gratuites · explications réservées aux élèves Premium'):'';
@@ -3275,7 +3276,8 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
    <div class="small" style="margin:10px 0;line-height:1.6">📋 ${T('cp.nq','{n} questions',{n:C.ids.length})}${C.chrono_min?'<br>⏱ '+T('cp.chr','{n} minutes : la compo se termine automatiquement à la fin du temps',{n:C.chrono_min}):''}${C.fin?'<br>📅 '+T('cp.dl','DATE LIMITE de la composition : {d}',{d:esc(fmtDate(C.fin))}):''}${mode?'<br>'+mode:''}</div>
    <label class="small" style="font-weight:700" for="cpNom">${T('cp.nom','Ton nom et prénom')}</label>
    <input class="tin" id="cpNom" maxlength="80" autocomplete="name" value="${esc(nom)}" placeholder="${esc(Tx('cp.nom.ph','Ex. Koné Awa'))}" style="width:100%;margin:6px 0 4px">
-   <div class="muted small" style="margin-bottom:10px">${T('cp.info','Ta note sera enregistrée avec ce nom. Une seule compo par téléphone.')}</div>
+   ${C.recompo&&C.essais?`<div class="fb good" style="margin:0 0 8px;padding:8px 10px"><div class="small">${T('cp.deja.n','🔁 Tu as déjà composé {n} fois{m}.',{n:C.essais,m:C.meilleure!=null?Tx('cp.deja.m',' · meilleure note {x}/20',{x:String(C.meilleure).replace('.',',')}):''})}</div></div>`:''}
+   <div class="muted small" style="margin-bottom:10px">${C.recompo?T('cp.info.re','Ta note sera enregistrée avec ce nom. Tu peux recomposer autant de fois que tu veux : chaque copie est enregistrée.'):T('cp.info','Ta note sera enregistrée avec ce nom. Une seule compo par téléphone.')}</div>
    <button class="btn coral" data-cp="go" style="width:100%">${T('cp.go','▶ Commencer la composition')}</button>${autresBtn()}`);
   lier(o);const inp=$('#cpNom',o);$('[data-cp="go"]',o).onclick=()=>{const v=String(inp.value||'').replace(/\s+/g,' ').trim();if(v.length<2){toast(Tx('cp.nom.vide','Écris ton nom pour commencer'));inp.focus();return}lancer(v)}}
  function lancer(nom){C.nom=nom;LS.set(NK,nom);LS.set(PK,'');if(C.fin&&C.fin<Date.now()){message(T('cp.fin.h','⏰ Composition terminée'),T('cp.fin','Cette composition est close : il n’est plus possible de composer.'));C=null;return}
@@ -3295,11 +3297,12 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
  let occupe=0,encore=0;
  async function vider(){if(occupe){encore=1;return}if(!file().length)return;occupe=1;try{do{encore=0;const L=file(),faits=new Set();
    for(const x of L){const moi=C&&C.envoi&&C.envoi.p_code===x.p_code;
-    try{const r=await rpc('compo_envoyer',x);faits.add(x.p_code+'|'+x.p_appareil);if(moi)C.etat=r&&r.ok?(r.deja?'deja':'ok'):(r&&r.raison==='terminee'?'terminee':'refus')}
+    try{const r=await rpc(x.p_cle?'compo_envoyer_copie':'compo_envoyer',x);faits.add(x.p_code+'|'+x.p_appareil+'|'+(x.p_cle||''));if(moi)C.etat=r&&r.ok?(r.deja?'deja':'ok'):(r&&r.raison==='terminee'?'terminee':'refus')}
     catch(e){if(moi)C.etat='err'}}
-   if(faits.size)LS.set(QK,file().filter(x=>!faits.has(x.p_code+'|'+x.p_appareil)))}while(encore&&file().length)}finally{occupe=0}maj()}
+   if(faits.size)LS.set(QK,file().filter(x=>!faits.has(x.p_code+'|'+x.p_appareil+'|'+(x.p_cle||''))))}while(encore&&file().length)}finally{occupe=0}maj()}
  function envoyer(){const s=nb();const x={p_code:C.code,p_appareil:RIC.device(),p_nom:C.nom,p_bonnes:s.ok,p_total:Math.max(1,s.n),p_duree_s:Math.round((Date.now()-C.t0)/1000)};
-  C.envoi=x;C.etat='envoi';C.note=Math.round(s.ok/Math.max(1,s.n)*200)/10;LS.set(QK,file().filter(y=>y.p_code!==x.p_code).concat([x]));vider()}
+  if(C.v2)x.p_cle=Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  C.envoi=x;C.etat='envoi';C.note=Math.round(s.ok/Math.max(1,s.n)*200)/10;LS.set(QK,file().filter(y=>C.recompo?y.p_cle!==x.p_cle:y.p_code!==x.p_code).concat([x]));vider()}
  function maj(){const b=document.getElementById('filBilan');if(b&&enFil())b.innerHTML=filBilanHTML()}
  window.riCompoRenvoyer=()=>{if(C)C.etat='envoi';maj();vider()};
  window.riCompoRemettre=()=>{if(!enFil()||FILS.fin)return;const o=$('#riremise');if(o)o.remove();FILS.expire=true;clearInterval(FILT);render()};
@@ -3313,7 +3316,12 @@ function riOuvrirResume(id){const m=MATI[id];if(!m)return;const key='matiere:'+i
    :e==='refus'?`<div class="fb bad" style="margin-top:10px"><div class="h">${T('cp.refus','⚠️ La note n’a pas pu être enregistrée')}</div></div>`
    :`<div class="muted small" style="margin-top:10px">${T('cp.envoi','⏳ Enregistrement de ta note…')}</div>`;
   return `<div class="card sf center"><h3>${T('cp.fini','🏁 Composition terminée')}</h3><div class="muted small">${esc(C.nom)}</div><div style="font-size:28px;font-weight:800">${sc}/20</div><div class="muted">${T('fil.score','{ok} bonne(s) réponse(s) sur {n}',{ok:s.ok,n:s.n})}</div>${st}
-   <button class="btn coral" style="margin-top:12px;width:100%" onclick="riCompoAutres()">${T('cp.autres','📚 Voir d’autres sujets')}</button></div>`};
+   ${C.recompo&&!(C.fin&&C.fin<Date.now())?`<button class="btn" style="margin-top:12px;width:100%" onclick="riCompoRecomposer()">${T('cp.recomp','🔄 Recomposer ce sujet')}</button>`:''}
+   <button class="btn coral" style="margin-top:${C.recompo?8:12}px;width:100%" onclick="riCompoAutres()">${T('cp.autres','📚 Voir d’autres sujets')}</button></div>`};
+ /* compo « recomposer plusieurs fois » : nouvelle copie, même nom, même chrono ; la copie précédente reste enregistrée (ou en file d'envoi) */
+ window.riCompoRecomposer=function(){if(!C||!C.recompo||!enFil()||!FILS.fin)return;const nom=C.nom;
+  if(C.envoi&&C.note!=null&&(C.meilleure==null||C.note>C.meilleure))C.meilleure=C.note;C.essais=(C.essais||0)+1;
+  C.envoi=null;C.etat=null;C.lance=false;clearInterval(FILT);FILS=null;lancer(nom)};
  window.riCompoDemanderRemise=function(){let o=$('#riremise');if(o)o.remove();o=document.createElement('div');o.id='riremise';o.className='pmod';const s=FILS?nb():{n:0};
   const r=FILS?Object.keys(FILS.ans).filter(id=>!FILS.ans[id].pending).length:0;
   o.innerHTML=`<div class="pbox"><h3>${T('cp.rq.h','🏁 Terminer la compo ?')}</h3><div class="muted small">${T('cp.rq','Tu as répondu à {r} question(s) sur {n}. Ensuite, tu ne pourras plus répondre.',{r,n:s.n})}</div>

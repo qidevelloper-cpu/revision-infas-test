@@ -3715,7 +3715,8 @@ async function cpCatalogue(){ const b=cpBase(); if(CP_CAT[b]) return CP_CAT[b];
 async function chargerCompos(){ if(MODE!=='supabase'||!SB){ CPS=null; return; } try{ const {data,error}=await SB.rpc('compo_lister'); if(error) throw error; CPS=data||[]; CP_ERR=''; }catch(e){ CPS=[]; CP_ERR=/function|PGRST|404/.test(String(e&&e.message||e))?'Lancez d’abord supabase/compos/1_compos.sql dans Supabase (SQL Editor → Run).':frErr(e); } }
 function cpNomCours(mid){ const c=CP_CAT[cpBase()]; const m=c&&c.L.find(x=>x.id===mid); return m?m.nom:mid; }
 function cpTexte(c){ const dl=c.date_limite?`\n📅 DATE LIMITE de la composition : ${dfr(c.date_limite,{weekday:'long',day:'numeric',month:'long'})} à ${hfr(c.date_limite)}`:'';
-  return `📝 Composition Révision INFAS${c.titre?' : '+c.titre:''}\n${cpNomCours(c.mid)} · ${c.sujet_titre||'Sujet '+(c.k+1)}${c.chrono_min?'\n⏱ '+c.chrono_min+' minutes':''}${dl}\nTouche ce lien pour composer : ${cpLien(c.code)}`; }
+  return `📝 Composition Révision INFAS${c.titre?' : '+c.titre:''}\n${cpNomCours(c.mid)} · ${c.sujet_titre||'Sujet '+(c.k+1)}${c.chrono_min?'\n⏱ '+c.chrono_min+' minutes':''}${dl}${c.recompo?'\n🔄 Tu peux recomposer plusieurs fois avec ce lien':''}\nTouche ce lien pour composer : ${cpLien(c.code)}`; }
+function cpTitreSujet(s){ return String(s&&s.t||'Sujet '+((s&&s.k||0)+1)).toLocaleUpperCase('fr-FR').replace(/\s+/g,' ').trim().slice(0,120); }
 function cpEtat(c){ if(!c.actif) return ['Close','bad']; if(c.date_limite&&new Date(c.date_limite)<new Date()) return ['Terminée','bad']; return ['Ouverte','ok']; }
 const cpDuree = s=>s==null?'—':(s>=60?Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s':s+' s');
 
@@ -3738,28 +3739,29 @@ VIEWS.compos = ()=>{
     </div>
     ${m&&!m.titres?`<div class="msg warn">Les titres des sujets de ce site arriveront avec la prochaine publication de l’appli ; en attendant, le sujet est repéré par son numéro.</div>`:''}
     <div class="codeform" style="margin-top:12px">
-      <div style="flex:1 1 230px"><label class="lbl" for="cptitre">Titre de la compo (facultatif)</label><input class="field" id="cptitre" maxlength="120" value="${esc(f.titre||'')}" placeholder="Ex. Compo de lundi · L3 IDE"></div>
+      <div style="flex:1 1 300px"><label class="lbl" for="cptitre">Titre de la compo (nom du sujet en majuscules, modifiable)</label><input class="field" id="cptitre" maxlength="120" value="${esc(f.titre||'')}" placeholder="NOM DU SUJET" style="text-transform:none"></div>
       <div><label class="lbl" for="cpchrono">Chronomètre (minutes)</label><input class="field" id="cpchrono" type="number" min="1" max="600" value="${esc(f.chrono||'')}" placeholder="Sans" style="max-width:130px"></div>
       <div><label class="lbl" for="cpdl">Date limite (facultatif)</label><input class="field" id="cpdl" type="datetime-local" value="${esc(f.dl||'')}"></div>
     </div>
     <div style="margin-top:12px"><span class="lbl">Accès</span><div class="chips" style="margin-top:6px">${Object.entries(CP_MODES).map(([k,v])=>`<button class="chip ${(f.mode||'gratuit')===k?'on':''}" data-cpmode="${k}" title="${esc(v[1])}">${v[0]}</button>`).join('')}</div>
       <p class="sub" style="margin-top:6px">${esc(CP_MODES[f.mode||'gratuit'][1])}. La gratuité ne vaut que pour ce sujet.</p></div>
+    <label class="row" style="gap:8px;margin-top:12px;cursor:pointer;padding:10px 12px;border-radius:12px;background:var(--soft,#f4f2fb)"><input type="checkbox" id="cprecomp" ${f.recompo?'checked':''} style="width:18px;height:18px"><span>🔄 <b>Recomposer plusieurs fois</b> : les élèves peuvent refaire la compo avec le même lien ; chaque copie est enregistrée (la moyenne compte la 1re copie). <span class="cnote">Réglable ensuite sur la compo.</span></span></label>
     <div style="margin-top:12px"><button class="btn pri" id="cpgo">${ic('plus')}Créer le lien</button></div>
     ${CP_NEUF?`<div class="codesneufs" style="margin-top:14px"><b>Lien créé :</b> <span class="code big">${esc(CP_NEUF.code)}</span>
       <div class="field" style="margin-top:8px;word-break:break-all;user-select:all">${esc(cpLien(CP_NEUF.code))}</div>
       <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><button class="btn sm" data-cpcopy="${esc(CP_NEUF.code)}">Copier le lien</button><button class="btn sm wa" data-cpwa="${esc(CP_NEUF.code)}">💬 WhatsApp</button><a class="btn sm" href="${esc(cpLien(CP_NEUF.code))}" target="_blank" rel="noopener">Ouvrir</a></div></div>`:''}`;
   const ligne = c=>{ const [et,cl]=cpEtat(c), cop=CP_COPIES[c.code];
-    return `<div class="coderow" style="${c.actif?'':'opacity:.75'}"><div class="cc" style="flex:1 1 260px;min-width:0"><div><b>${esc(c.titre||c.sujet_titre||'Sujet '+(c.k+1))}</b> <span class="pill ${cl==='ok'?'':'warn'}">${et}</span></div>
+    return `<div class="coderow" style="${c.actif?'':'opacity:.75'}"><div class="cc" style="flex:1 1 260px;min-width:0"><div><b>${esc(c.titre||c.sujet_titre||'Sujet '+(c.k+1))}</b> <span class="pill ${cl==='ok'?'':'warn'}">${et}</span>${c.recompo?' <span class="pill" title="Les élèves peuvent recomposer">🔄 Recomposer</span>':''}</div>
       <small>${esc(cpNomCours(c.mid))} · ${esc(c.sujet_titre||'Sujet '+(c.k+1))}</small>
       <small><b class="code">${esc(c.code)}</b> · ${esc(CP_MODES[c.mode]?CP_MODES[c.mode][0]:c.mode)}${c.chrono_min?' · ⏱ '+c.chrono_min+' min':''}${c.date_limite?' · 📅 '+dfr(c.date_limite,{day:'numeric',month:'short'})+' '+hfr(c.date_limite):''} · créée le ${dfr(c.cree_at,{day:'numeric',month:'short'})}</small>
-      <small>📋 ${c.copies||0} copie${(c.copies||0)>1?'s':''}${c.moyenne!=null?' · moyenne '+String(c.moyenne).replace('.',',')+'/20':''}</small></div>
-      <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm" data-cpres="${esc(c.code)}">${cop?'Masquer':'Résultats'}</button><button class="btn sm" data-cpcopy="${esc(c.code)}">Copier le lien</button><button class="btn sm wa" data-cpwa="${esc(c.code)}">💬 WhatsApp</button><button class="btn sm" data-cpact="${esc(c.code)}" data-on="${c.actif?0:1}">${c.actif?'Clore':'Rouvrir'}</button></div>
-      ${cop?`<div style="flex-basis:100%">${cop==='…'?'<p class="sub">Chargement…</p>':!cop.length?'<p class="sub">Aucune copie pour l’instant.</p>':`<div class="tablewrap"><table class="t"><thead><tr><th>#</th><th>Élève</th><th>Note</th><th>Bonnes réponses</th><th>Durée</th><th>Envoyée le</th></tr></thead><tbody>${cop.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.nom)}</td><td><b>${String(r.note).replace('.',',')}/20</b></td><td>${r.bonnes}/${r.total}</td><td>${cpDuree(r.duree_s)}</td><td>${dfr(r.envoye_at,{day:'numeric',month:'short'})} ${hfr(r.envoye_at)}</td></tr>`).join('')}</tbody></table></div>
+      <small>📋 ${c.copies||0} ${c.envois!=null?'élève':'copie'}${(c.copies||0)>1?'s':''}${c.envois!=null&&c.envois>(c.copies||0)?' · '+c.envois+' copies':''}${c.moyenne!=null?' · moyenne '+String(c.moyenne).replace('.',',')+'/20'+(c.envois>(c.copies||0)?' (1res copies)':''):''}</small></div>
+      <div class="row" style="flex-wrap:wrap;gap:6px"><button class="btn sm" data-cpres="${esc(c.code)}">${cop?'Masquer':'Résultats'}</button><button class="btn sm" data-cpcopy="${esc(c.code)}">Copier le lien</button><button class="btn sm wa" data-cpwa="${esc(c.code)}">💬 WhatsApp</button><button class="btn sm" data-cpre="${esc(c.code)}" data-on="${c.recompo?0:1}" title="${c.recompo?'Revenir à une seule copie par téléphone':'Permettre aux élèves de refaire la compo'}">${c.recompo?'1️⃣ Une seule copie':'🔄 Permettre de recomposer'}</button><button class="btn sm" data-cpact="${esc(c.code)}" data-on="${c.actif?0:1}">${c.actif?'Clore':'Rouvrir'}</button></div>
+      ${cop?`<div style="flex-basis:100%">${cop==='…'?'<p class="sub">Chargement…</p>':!cop.length?'<p class="sub">Aucune copie pour l’instant.</p>':`<div class="tablewrap"><table class="t"><thead><tr><th>#</th><th>Élève</th>${cop.some(r=>r.essai>1)?'<th>Copie</th>':''}<th>Note</th><th>Bonnes réponses</th><th>Durée</th><th>Envoyée le</th></tr></thead><tbody>${cop.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.nom)}</td>${cop.some(r=>r.essai>1)?`<td>${r.essai>1?'n° '+r.essai:'1re'}</td>`:''}<td><b>${String(r.note).replace('.',',')}/20</b></td><td>${r.bonnes}/${r.total}</td><td>${cpDuree(r.duree_s)}</td><td>${dfr(r.envoye_at,{day:'numeric',month:'short'})} ${hfr(r.envoye_at)}</td></tr>`).join('')}</tbody></table></div>
         <button class="btn sm" data-cpcsv="${esc(c.code)}" style="margin-top:8px">${ic('dl')}Exporter (CSV)</button>`}</div>`:''}</div>`; };
   return headHTML('Compositions', 'Liens de composition à envoyer aux élèves : le sujet s’ouvre directement dans l’appli, l’élève tape son nom et sa note revient ici.', `<div class="chips">${CP_SITES.map(([k,l])=>`<button class="chip ${site===k?'on':''}" data-cpsite="${k}">Lien vers : ${l}</button>`).join('')}</div>`) +
     (MODE!=='supabase' ? `<div class="card"><div class="msg warn">Connectez le tableau de bord à Supabase (compte administrateur) pour créer des compositions.</div></div>` : CP_ERR ? `<div class="card"><div class="msg bad">${esc(CP_ERR)}</div></div>` : `
     <div class="card"><div class="cardhead"><div class="grow"><h3>📝 Nouvelle composition</h3><p class="sub">Choisissez un sujet, l’accès, et si besoin un chronomètre (la compo se termine automatiquement à la fin du temps) ou une date limite (après, le lien affiche « Composition terminée »).</p></div></div>${form}</div>
-    <div class="card" style="margin-top:18px"><div class="cardhead"><div class="grow"><h3>Compositions créées</h3><p class="sub">Un envoi par appareil et par compo. Sans compte, le nom tapé par l’élève n’est pas vérifié.</p></div><button class="btn sm" id="cpreload">Actualiser</button></div>
+    <div class="card" style="margin-top:18px"><div class="cardhead"><div class="grow"><h3>Compositions créées</h3><p class="sub">Un envoi par téléphone, sauf les compos « 🔄 Recomposer » (plusieurs copies). Sans compte, le nom tapé par l’élève n’est pas vérifié.</p></div><button class="btn sm" id="cpreload">Actualiser</button></div>
       <div class="codelist">${CPS===null?'<p class="sub">Chargement…</p>':CPS.map(ligne).join('')||'<p class="sub">Aucune composition pour l’instant.</p>'}</div></div>`);
 };
 AFTER.compos = ()=>{
@@ -3767,7 +3769,14 @@ AFTER.compos = ()=>{
   if(CPS===null){ chargerCompos().then(()=>{ if(page==='compos') render(); }); }
   if(!CP_CAT[cpBase()]){ cpCatalogue().then(()=>{ if(page==='compos') render(); }); }
   const f = UI.cpF = UI.cpF||{};
-  const lire = ()=>{ if($('#cpmid')) f.mid=$('#cpmid').value; if($('#cpk')) f.k=$('#cpk').value; if($('#cptitre')) f.titre=$('#cptitre').value; if($('#cpchrono')) f.chrono=$('#cpchrono').value; if($('#cpdl')) f.dl=$('#cpdl').value; };
+  const lire = ()=>{ if($('#cpmid')) f.mid=$('#cpmid').value; if($('#cpk')) f.k=$('#cpk').value; if($('#cptitre')) f.titre=$('#cptitre').value; if($('#cpchrono')) f.chrono=$('#cpchrono').value; if($('#cpdl')) f.dl=$('#cpdl').value; if($('#cprecomp')) f.recompo=$('#cprecomp').checked; };
+  /* titre de la compo = nom du sujet choisi, en MAJUSCULES (tant que l'administrateur ne l'a pas changé à la main) */
+  const titreAuto = ()=>{ const cat=CP_CAT[cpBase()], m=cat&&cat.ok&&(cat.L.find(x=>x.id===String(f.mid||'').replace(/^doc\|/,''))||cat.L[0]); const kk=$('#cpk')?+$('#cpk').value:+f.k||0;
+    const s=m&&m.sujets.find(x=>x.k===kk); return s?cpTitreSujet(s):''; };
+  const majTitre = ()=>{ const i=$('#cptitre'); if(!i) return; if(f.titreMain && String(f.titre||'').trim()) return; const t=titreAuto(); i.value=t; f.titre=t; f.titreMain=false; };
+  if($('#cptitre')){ $('#cptitre').oninput=()=>{ f.titre=$('#cptitre').value; f.titreMain = !!f.titre.trim() && f.titre!==titreAuto(); }; majTitre(); }
+  if($('#cpk')) $('#cpk').onchange=()=>{ f.k=$('#cpk').value; majTitre(); };
+  if($('#cprecomp')) $('#cprecomp').onchange=()=>{ f.recompo=$('#cprecomp').checked; };
   const cp = t=>{ try{ navigator.clipboard.writeText(t); toast('Lien copié.'); }catch(e){ toast(t); } };
   const parCode = code=>(CPS||[]).find(c=>c.code===code) || (CP_NEUF&&CP_NEUF.code===code?CP_NEUF:null);
   document.querySelectorAll('[data-cpsite]').forEach(b=>b.onclick=()=>{ lire(); UI.cpSite=b.dataset.cpsite; render(); });
@@ -3779,18 +3788,26 @@ AFTER.compos = ()=>{
     if(chrono!=null&&!(chrono>=1&&chrono<=600)){ toast('Chronomètre : entre 1 et 600 minutes.'); return; }
     const dl=f.dl?new Date(f.dl):null; if(dl&&!(dl>new Date())){ toast('La date limite doit être dans le futur.'); return; }
     $('#cpgo').disabled=true;
-    try{ const args={p_titre:(f.titre||'').trim(), p_mid:m.id, p_k:k, p_sujet_titre:s.t||'', p_mode:f.mode||'gratuit', p_chrono_min:chrono, p_date_limite:dl?dl.toISOString():null};
-      const {data,error}=await SB.rpc('compo_creer',args); if(error) throw error; if(!data||!data.ok) throw new Error('Création refusée ('+(data&&data.raison||'?')+').');
-      CP_NEUF={code:data.code, titre:args.p_titre, mid:m.id, k, sujet_titre:args.p_sujet_titre, mode:args.p_mode, chrono_min:chrono, date_limite:args.p_date_limite};
+    try{ const args={p_titre:((f.titre||'').trim()||cpTitreSujet(s.t?s:{k})), p_mid:m.id, p_k:k, p_sujet_titre:s.t||'', p_mode:f.mode||'gratuit', p_chrono_min:chrono, p_date_limite:dl?dl.toISOString():null};
+      if(f.recompo) args.p_recompo=true;
+      const {data,error}=await SB.rpc('compo_creer',args); if(error){ if(f.recompo && /function|PGRST|404|schema/i.test(String(error.message||error))) throw new Error('Collez d’abord supabase/compos/2_recomposer.sql dans Supabase (option « Recomposer »).'); throw error; } if(!data||!data.ok) throw new Error('Création refusée ('+(data&&data.raison||'?')+').');
+      CP_NEUF={code:data.code, titre:args.p_titre, mid:m.id, k, sujet_titre:args.p_sujet_titre, mode:args.p_mode, chrono_min:chrono, date_limite:args.p_date_limite, recompo:!!f.recompo};
+      f.titreMain=false;
       audit('Composition créée', data.code+' · '+(args.p_titre||s.t||m.nom)); await chargerCompos(); render(); toast('Lien de composition créé.');
-    }catch(e){ toast(/function|PGRST|404/.test(String(e&&e.message||e))?'Lancez d’abord supabase/compos/1_compos.sql dans Supabase.':frErr(e)); if($('#cpgo')) $('#cpgo').disabled=false; } };
+    }catch(e){ toast(/2_recomposer/.test(String(e&&e.message||e))?e.message:/function|PGRST|404/.test(String(e&&e.message||e))?'Lancez d’abord supabase/compos/1_compos.sql dans Supabase.':frErr(e), 6000); if($('#cpgo')) $('#cpgo').disabled=false; } };
+  /* compo déjà programmée : permettre (ou non) de recomposer */
+  document.querySelectorAll('[data-cpre]').forEach(b=>b.onclick=async()=>{ const on=b.dataset.on==='1', code=b.dataset.cpre; b.disabled=true;
+    try{ const {data,error}=await SB.rpc('compo_regler',{p_code:code,p_recompo:on,p_titre:null}); if(error) throw error; if(!data||!data.ok) throw new Error('Composition introuvable.');
+      audit(on?'Composition : recomposer permis':'Composition : une seule copie', code); await chargerCompos(); render();
+      toast(on?'🔄 Les élèves peuvent maintenant recomposer avec le même lien (même ceux qui ont déjà composé).':'1️⃣ Une seule copie par téléphone (les copies déjà reçues sont gardées).', 6000); }
+    catch(e){ b.disabled=false; toast(/function|PGRST|404|schema/i.test(String(e&&e.message||e))?'Collez d’abord supabase/compos/2_recomposer.sql dans Supabase (SQL Editor → Run).':frErr(e), 6000); } });
   document.querySelectorAll('[data-cpcopy]').forEach(b=>b.onclick=()=>cp(cpLien(b.dataset.cpcopy)));
   document.querySelectorAll('[data-cpwa]').forEach(b=>b.onclick=()=>{ const c=parCode(b.dataset.cpwa); if(c) window.open('https://wa.me/?text='+encodeURIComponent(cpTexte(c)),'_blank','noopener'); });
   document.querySelectorAll('[data-cpres]').forEach(b=>b.onclick=async()=>{ const code=b.dataset.cpres; if(CP_COPIES[code]){ delete CP_COPIES[code]; render(); return; }
     CP_COPIES[code]='…'; render(); try{ const {data,error}=await SB.rpc('compo_copies',{p_code:code}); if(error) throw error; CP_COPIES[code]=data||[]; }catch(e){ delete CP_COPIES[code]; toast(frErr(e)); } render(); });
   document.querySelectorAll('[data-cpcsv]').forEach(b=>b.onclick=()=>{ const code=b.dataset.cpcsv, L=CP_COPIES[code]||[], c=parCode(code)||{};
     const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-    const csv='﻿'+['Rang;Élève;Note /20;Bonnes réponses;Total;Durée (s);Envoyée le'].concat(L.map((r,i)=>[i+1,q(r.nom),String(r.note).replace('.',','),r.bonnes,r.total,r.duree_s??'',q(new Date(r.envoye_at).toLocaleString('fr-FR'))].join(';'))).join('\n');
+    const csv='﻿'+['Rang;Élève;Copie n°;Note /20;Bonnes réponses;Total;Durée (s);Envoyée le'].concat(L.map((r,i)=>[i+1,q(r.nom),r.essai||1,String(r.note).replace('.',','),r.bonnes,r.total,r.duree_s??'',q(new Date(r.envoye_at).toLocaleString('fr-FR'))].join(';'))).join('\n');
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='compo-'+code+(c.titre?'-'+c.titre.replace(/[^\p{L}\p{N}]+/gu,'-'):'')+'.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); });
   document.querySelectorAll('[data-cpact]').forEach(b=>b.onclick=()=>{ const on=b.dataset.on==='1', code=b.dataset.cpact;
     const go=async()=>{ closeModal(); try{ const {data,error}=await SB.rpc('compo_activer',{p_code:code,p_actif:on}); if(error) throw error; if(!data||!data.ok) throw new Error('Composition introuvable.'); audit(on?'Composition rouverte':'Composition close', code); await chargerCompos(); render(); toast(on?'Composition rouverte.':'Composition close : le lien affiche « Composition terminée ».'); }catch(e){ toast(frErr(e)); } };

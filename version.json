@@ -1,7 +1,7 @@
 {
- "v": "5770f945c9",
+ "v": "938c9cd052",
  "date": "2026-11-20",
- "sig": "5510753a0a8e6bfa41860ee72ebe263334404292",
+ "sig": "eaebb5ad39206e76f6bc641c80edee507e8d13ce",
  "notes": [
   {
    "t": "Nouvelle mise à jour"
@@ -115,7 +115,7 @@
  },
  "hist": [
   {
-   "v": "5770f945c9",
+   "v": "938c9cd052",
    "date": "2026-11-20",
    "notes": [
     {
