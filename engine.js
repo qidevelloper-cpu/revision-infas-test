@@ -4166,23 +4166,36 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
  function texte(q){let x=typeof riXtxt==='function'?riXtxt(q.x||''):String(q.x||'');
   x=x.split('\n').filter(l=>!/^\s*(Sources?|Source externe[^:]*)\s*:/i.test(l)).join('\n');
   return x.replace(/‰/g,' pour mille').replace(/\s+/g,' ').trim()}
- let cur=null;
+ let cur=null,txt='',pos=0;
+ const VIT=[1,1.25,1.5,2];
+ const vit=()=>{let v=1;try{v=+localStorage.getItem('ri_vox_rate')||1}catch(e){}return VIT.includes(v)?v:1};
+ const vitTxt=v=>String(v).replace('.',',')+'×';
+ function parler(qid,depuis){const u=new SpeechSynthesisUtterance(txt.slice(depuis));pos=depuis;u.lang='fr-FR';const v=voix();if(v)u.voice=v;u.rate=.95*vit();
+  u.onboundary=e=>{if(cur===qid&&e.charIndex!=null)pos=depuis+e.charIndex};
+  u.onend=u.onerror=()=>{if(cur===qid&&u.__fin!==1){cur=null;maj()}};cur=qid;maj();speechSynthesis.speak(u);return u}
+ let U=null;
  function voix(){let V=[];try{V=speechSynthesis.getVoices()||[]}catch(e){}
   return V.find(v=>/^fr[-_]FR/i.test(v.lang)&&/google|natural|neural|premium|enhanced/i.test(v.name))||V.find(v=>/^fr[-_]FR/i.test(v.lang))||V.find(v=>/^fr/i.test(v.lang))||null}
- function maj(){document.querySelectorAll('.ri-vox-tts').forEach(b=>{const on=b.dataset.q===cur;b.classList.toggle('on',on);
+ function maj(){const v=vit();document.querySelectorAll('.ri-vox-r').forEach(b=>{const on=+b.dataset.v===v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});
+  document.querySelectorAll('audio.ri-vox-au').forEach(a=>{try{a.playbackRate=v}catch(e){}});
+  document.querySelectorAll('.ri-vox-tts').forEach(b=>{const on=b.dataset.q===cur;b.classList.toggle('on',on);
   b.innerHTML=on?'⏹️ '+esc(Tx('vox.stop','Arrêter la lecture')):'🔊 '+esc(Tx('vox.lire','Écouter l’explication'))})}
  window.riVox={
   lire(qid){if(!ttsOk()||!droit())return;if(cur===qid){this.stop();return}const q=QI[qid];if(!q)return;const t=texte(q);if(!t)return;
    try{speechSynthesis.cancel()}catch(e){}document.querySelectorAll('audio.ri-vox-au').forEach(a=>{try{a.pause()}catch(e){}});
-   const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';const v=voix();if(v)u.voice=v;u.rate=.95;
-   u.onend=u.onerror=()=>{if(cur===qid){cur=null;maj()}};cur=qid;maj();speechSynthesis.speak(u)},
-  stop(){try{if(ttsOk())speechSynthesis.cancel()}catch(e){}cur=null;maj()},
+   txt=t;U=parler(qid,0)},
+  stop(){if(U)U.__fin=1;try{if(ttsOk())speechSynthesis.cancel()}catch(e){}cur=null;maj()},
+  /* vitesse 1× 1,25× 1,5× 2× : mémorisée ; la voix du téléphone reprend au mot en cours avec la nouvelle vitesse */
+  vitesse(v){if(!VIT.includes(+v))return;try{localStorage.setItem('ri_vox_rate',String(+v))}catch(e){}
+   if(cur&&ttsOk()){const q=cur;if(U)U.__fin=1;try{speechSynthesis.cancel()}catch(e){}const d=Math.max(0,txt.lastIndexOf(' ',pos)+1);U=parler(q,d>=txt.length?0:d)}maj()},
+  vit,
   verrou(){RIC.paywall('fonction:notes-vocales',Tx('vox.prem','Notes vocales · Premium'))},
   bloc,auOk};
  function bloc(qid){const q=QI[qid];if(!q)return'';const rec=auOk(q.au),tts=ttsOk()&&!!texte(q);if(!rec&&!tts)return'';
   if(!droit())return`<div class="ri-vox lock"><button type="button" class="ri-vox-b" onclick="riVox.verrou()">🔊 ${esc(Tx('vox.lire','Écouter l’explication'))} <span class="ri-vox-p">🔒 Premium</span></button></div>`;
-  if(rec)return`<div class="ri-vox"><div class="ri-vox-h">🎙️ ${esc(Tx('vox.note','Note vocale de l’enseignant'))}</div><audio class="ri-vox-au" controls preload="none" src="${esc(q.au)}" onplay="riVox.stop()"></audio></div>`;
-  return`<div class="ri-vox"><button type="button" class="ri-vox-b ri-vox-tts" data-q="${esc(qid)}" onclick="riVox.lire('${jsq(qid)}')">🔊 ${esc(Tx('vox.lire','Écouter l’explication'))}</button></div>`}
+  const V=`<div class="ri-vox-v" role="group" aria-label="${esc(Tx('vox.vit','Vitesse'))}"><span>${esc(Tx('vox.vit','Vitesse'))}</span>${VIT.map(v=>`<button type="button" class="ri-vox-r" data-v="${v}" onclick="riVox.vitesse(${v})">${vitTxt(v)}</button>`).join('')}</div>`;
+  if(rec)return`<div class="ri-vox"><div class="ri-vox-h">🎙️ ${esc(Tx('vox.note','Note vocale de l’enseignant'))}</div><audio class="ri-vox-au" controls preload="none" src="${esc(q.au)}" onplay="riVox.stop();this.playbackRate=riVox.vit()" onloadedmetadata="this.playbackRate=riVox.vit()"></audio>${V}</div>`;
+  return`<div class="ri-vox"><button type="button" class="ri-vox-b ri-vox-tts" data-q="${esc(qid)}" onclick="riVox.lire('${jsq(qid)}')">🔊 ${esc(Tx('vox.lire','Écouter l’explication'))}</button>${V}</div>`}
  function poser(){if(typeof VIEW==='undefined'||VIEW!=='fil'){if(cur)riVox.stop();return}
   document.querySelectorAll('#app .filq').forEach(card=>{const fb=card.querySelector('.fb');if(!fb)return;const qid=card.id.replace(/^fq-/,'');
    const h=bloc(qid),sig=h.length+'|'+((QI[qid]||{}).au||''),ex=fb.querySelector('.ri-vox');
@@ -4194,6 +4207,10 @@ function riXtxt(s){return String(s==null?'':s).replace(/\[\/?(?:b|i|u|g|tg|p)\]/
  .ri-vox-h{font-weight:800;font-size:calc(14px*var(--ts,1));margin-bottom:6px;color:#1D4E89}.ri-vox audio{width:100%;height:40px;display:block}
  .ri-vox-b{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;border-radius:999px;border:2px solid #2B7BD8;background:#fff;color:#1D4E89;font:inherit;font-weight:800;font-size:calc(15px*var(--ts,1));cursor:pointer}
  .ri-vox-b.on{background:#2B7BD8;color:#fff}.ri-vox.lock{background:#F7F5FB;border-color:#E4DDF5}.ri-vox.lock .ri-vox-b{border-color:#B9A6EE;color:#5B3FB8}
+ .ri-vox-v{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;font-size:calc(13px*var(--ts,1));font-weight:700;color:#1D4E89}
+ .ri-vox-r{min-width:52px;min-height:36px;padding:4px 10px;border-radius:999px;border:1.5px solid #9DC3EE;background:#fff;color:#1D4E89;font:inherit;font-weight:800;cursor:pointer}
+ .ri-vox-r.on{background:#2B7BD8;border-color:#2B7BD8;color:#fff}
+ [data-theme="dark"] .ri-vox-v{color:#9cc5f5}[data-theme="dark"] .ri-vox-r{background:#0f1b2b;color:#cfe3fb;border-color:#24426a}[data-theme="dark"] .ri-vox-r.on{background:#2B7BD8;color:#fff}
  .ri-vox-p{font-size:12px;font-weight:800;background:#F3EEFF;border-radius:999px;padding:2px 8px}
  [data-theme="dark"] .ri-vox{background:#16263c;border-color:#24426a}[data-theme="dark"] .ri-vox-h{color:#9cc5f5}[data-theme="dark"] .ri-vox-b{background:#0f1b2b;color:#cfe3fb}
  [data-theme="dark"] .ri-vox-b.on{background:#2B7BD8;color:#fff}[data-theme="dark"] .ri-vox.lock{background:#1f1a33;border-color:#3a2f63}`;document.head.appendChild(st)}
