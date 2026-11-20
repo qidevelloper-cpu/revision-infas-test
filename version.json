@@ -1,14 +1,10 @@
 {
- "v": "b538d80b20",
+ "v": "ece19a272a",
  "date": "2026-11-20",
- "sig": "c3c15207f1f1f2fb88f411a65ad7cd9a5779ef98",
+ "sig": "2c6aa061ba85008394c9bd6e539773540797c6ba",
  "notes": [
   {
    "t": "🔊 Écoute les explications à voix haute"
-  },
-  {
-   "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
-   "m": "xmvkq4zed"
   }
  ],
  "mats": {
@@ -114,6 +110,15 @@
   }
  },
  "hist": [
+  {
+   "v": "ece19a272a",
+   "date": "2026-11-20",
+   "notes": [
+    {
+     "t": "🔊 Écoute les explications à voix haute"
+    }
+   ]
+  },
   {
    "v": "b538d80b20",
    "date": "2026-11-20",
@@ -228,19 +233,6 @@
    "notes": [
     {
      "t": "Nouveau : sujet J2 Pédiatrie IDE-SFM corrigé et expliqué"
-    },
-    {
-     "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
-     "m": "xmvkq4zed"
-    }
-   ]
-  },
-  {
-   "v": "f410873b74",
-   "date": "2026-11-17",
-   "notes": [
-    {
-     "t": "Nouveau : sujet J2 Gynéco-obstétrique SF3 corrigé et expliqué"
     },
     {
      "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
