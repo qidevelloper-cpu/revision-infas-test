@@ -1,10 +1,10 @@
 {
- "v": "01eb566d1c",
- "date": "2026-11-20",
- "sig": "cf4fc7b11a05ef9f99490d5ad05627c16c097b9e",
+ "v": "1b5099343c",
+ "date": "2026-11-21",
+ "sig": "aa3f5556c171078501799a9db85ad2be36a35833",
  "notes": [
   {
-   "t": "Nouvelle mise à jour"
+   "t": "Nouveaux sujets J : J2 à J4 corrigés et expliqués"
   },
   {
    "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
@@ -46,7 +46,7 @@
   },
   "xmvkq4zed": {
    "t": "CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
-   "h": "b57ef21c1c2690724b79363eab8586cd9f54abcf"
+   "h": "ed53b9ea94ce65891005717e8b01766956836d2e"
   },
   "xmvkq53re": {
    "t": "Pharmacologie",
@@ -115,11 +115,11 @@
  },
  "hist": [
   {
-   "v": "01eb566d1c",
-   "date": "2026-11-20",
+   "v": "1b5099343c",
+   "date": "2026-11-21",
    "notes": [
     {
-     "t": "Nouvelle mise à jour"
+     "t": "Nouveaux sujets J : J2 à J4 corrigés et expliqués"
     },
     {
      "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
@@ -247,5 +247,5 @@
  ],
  "moteur": 2,
  "format": 2,
- "auto": 3
+ "auto": 4
 }
