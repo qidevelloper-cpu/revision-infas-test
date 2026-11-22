@@ -1,10 +1,10 @@
 {
- "v": "c67079e901",
+ "v": "3807a283da",
  "date": "2026-11-22",
  "sig": "b6b58b3250977a493c367109a945c1bc6c6013f7",
  "notes": [
   {
-   "t": "Partage des sujets avec tes amis sur WhatsApp ; annonces en haut ou en bas de l'accueil"
+   "t": "Nouveau : partage un sujet à tes amis sur WhatsApp 📤"
   }
  ],
  "mats": {
@@ -111,11 +111,11 @@
  },
  "hist": [
   {
-   "v": "c67079e901",
+   "v": "3807a283da",
    "date": "2026-11-22",
    "notes": [
     {
-     "t": "Partage des sujets avec tes amis sur WhatsApp ; annonces en haut ou en bas de l'accueil"
+     "t": "Nouveau : partage un sujet à tes amis sur WhatsApp 📤"
     }
    ]
   },
