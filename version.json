@@ -1,10 +1,34 @@
 {
- "v": "fba2a06bd1",
+ "v": "54108b7374",
  "date": "2026-11-23",
- "sig": "d913bbf092a4ca1b7b979847056efabf8e7e7b4b",
+ "sig": "504ca9f34ad3cc9c366b214c7d27d2d3789c61f7",
  "notes": [
   {
-   "t": "Nouveau : relis le cas clinique sans remonter 📋"
+   "t": "Nouvelle mise à jour de l'appli"
+  },
+  {
+   "t": "📘 Nouveau cours : Soins infirmiers en chirurgie — Auxiliaires de santé",
+   "m": "xauxchir"
+  },
+  {
+   "t": "📘 Nouveau cours : Gynéco-obstétrique — Auxiliaires de santé",
+   "m": "xauxgyn"
+  },
+  {
+   "t": "📘 Nouveau cours : Soins infirmiers en médecine — Auxiliaires de santé",
+   "m": "xauxmed"
+  },
+  {
+   "t": "📘 Nouveau cours : Pédiatrie — Auxiliaires de santé",
+   "m": "xauxped"
+  },
+  {
+   "t": "📘 Nouveau cours : Santé publique — Auxiliaires de santé",
+   "m": "xauxsp"
+  },
+  {
+   "t": "📘 Nouveau cours : Santé de la reproduction / PF — Auxiliaires de santé",
+   "m": "xauxsrpf"
   }
  ],
  "mats": {
@@ -96,6 +120,30 @@
    "t": "Ophtalmologie",
    "h": "864477f569d744990ba9ccbbd3a43fd64a031847"
   },
+  "xauxchir": {
+   "t": "Soins infirmiers en chirurgie — Auxiliaires de santé",
+   "h": "228b6fb6026186ac8586f61cdb81ff349ab6661f"
+  },
+  "xauxgyn": {
+   "t": "Gynéco-obstétrique — Auxiliaires de santé",
+   "h": "62dc4eb84485d34ca8f8d5691f93708120edf1ab"
+  },
+  "xauxmed": {
+   "t": "Soins infirmiers en médecine — Auxiliaires de santé",
+   "h": "38783777222c8019106ef6ec63e0f7ae4ef35913"
+  },
+  "xauxped": {
+   "t": "Pédiatrie — Auxiliaires de santé",
+   "h": "30b629e5dc20b8cdc19bcb773a93918ad125d3c9"
+  },
+  "xauxsp": {
+   "t": "Santé publique — Auxiliaires de santé",
+   "h": "ae4e9054a4136a4ce83a310001c9abac5bdaf340"
+  },
+  "xauxsrpf": {
+   "t": "Santé de la reproduction / PF — Auxiliaires de santé",
+   "h": "a7ff1cee77fe417fe4da0005314c1b1ca8c69372"
+  },
   "xmedann": {
    "t": "Médecine — Annales corrigées L3 IDE",
    "h": "da1668a3cde14d3203d0ee651fa460c299e649de"
@@ -110,6 +158,39 @@
   }
  },
  "hist": [
+  {
+   "v": "54108b7374",
+   "date": "2026-11-23",
+   "notes": [
+    {
+     "t": "Nouvelle mise à jour de l'appli"
+    },
+    {
+     "t": "📘 Nouveau cours : Soins infirmiers en chirurgie — Auxiliaires de santé",
+     "m": "xauxchir"
+    },
+    {
+     "t": "📘 Nouveau cours : Gynéco-obstétrique — Auxiliaires de santé",
+     "m": "xauxgyn"
+    },
+    {
+     "t": "📘 Nouveau cours : Soins infirmiers en médecine — Auxiliaires de santé",
+     "m": "xauxmed"
+    },
+    {
+     "t": "📘 Nouveau cours : Pédiatrie — Auxiliaires de santé",
+     "m": "xauxped"
+    },
+    {
+     "t": "📘 Nouveau cours : Santé publique — Auxiliaires de santé",
+     "m": "xauxsp"
+    },
+    {
+     "t": "📘 Nouveau cours : Santé de la reproduction / PF — Auxiliaires de santé",
+     "m": "xauxsrpf"
+    }
+   ]
+  },
   {
    "v": "fba2a06bd1",
    "date": "2026-11-23",
@@ -204,19 +285,6 @@
    "notes": [
     {
      "t": "Sujets J5 : Médecine, Chirurgie, Pédiatrie, Santé publique, Gynéco, SSR/PF"
-    },
-    {
-     "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",
-     "m": "xmvkq4zed"
-    }
-   ]
-  },
-  {
-   "v": "1b5099343c",
-   "date": "2026-11-21",
-   "notes": [
-    {
-     "t": "Nouveaux sujets J : J2 à J4 corrigés et expliqués"
     },
     {
      "t": "🔄 Cours mis à jour : CORRECTION NATIONAL DES EXAMENS BLANC IDE/SF MAE",

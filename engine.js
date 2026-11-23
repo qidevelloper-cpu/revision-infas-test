@@ -4415,4 +4415,50 @@ const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2"
   return t};
  const _un=unesc;unesc=function(t){return _un.call(this,libre()?t:riMasqueApp(t))};
 })();
+/* ======================= FILIÈRE « AUXILIAIRE DE SANTÉ » CLOISONNÉE (décision de Daniel, 23/11/2026) =======================
+   · nouvelle filière AUX, choisie à l'inscription comme IDE / Sage-femme ;
+   · un élève AUX ne voit QUE les cours marqués fil:['AUX'] ; un élève des autres filières ne les voit jamais
+     (les cours de l'autre groupe sont retirés des listes, des sujets, des quiz, de la recherche et des questions) ;
+   · une fois inscrit, l'élève ne peut pas passer seul d'un groupe à l'autre (IDE / SF / IADE ↔ AUX) ;
+   · « deux filières » : l'éditeur (Studio) et les comptes autorisés au tableau de bord voient tout.
+     Autorisation : app_settings « public.access » → deuxFilieres = liste d'empreintes SHA-256 des e-mails (minuscules),
+     jamais les e-mails en clair. Ces comptes peuvent aussi changer librement de filière pour voir l'appli comme l'élève. */
+(function(){
+ const AUX='AUX',LK='ri_deux_fil';
+ try{if(typeof DATA0!=='undefined'&&Array.isArray(DATA0.filieres)&&!DATA0.filieres.some(f=>f.id===AUX))DATA0.filieres.push({id:AUX,n:'Auxiliaire de santé',e:'🩹'})}catch(e){}
+ const estAuxMat=m=>!!(m&&Array.isArray(m.fil)&&m.fil.includes(AUX));
+ const groupeFil=f=>f===AUX?'aux':(f?'std':'');
+ let DEUX=false;try{DEUX=localStorage.getItem(LK)==='1'}catch(e){}
+ function deux(){try{if(typeof EDITMODE!=='undefined'&&EDITMODE)return true;if(typeof RO!=='undefined'&&RO===false)return true}catch(e){}return DEUX}
+ window.riFiliere={AUX,estAuxMat,deux:()=>deux(),groupe:()=>groupeFil(S&&S.fil)};
+ /* cloisonnement : après chaque calcul du contenu */
+ const _ac=applyContent;applyContent=function(){const r=_ac.apply(this,arguments);try{cloison()}catch(e){console.warn('RI filière',e)}return r};
+ function cloison(){if(deux()||!S)return;const aux=S.fil===AUX,K=new Set();
+  MAT.forEach(m=>{const cache=aux?!estAuxMat(m):estAuxMat(m);if(!cache)return;m.off=true;m.cloison=1;K.add(m.id);QBM[m.id]=[]});
+  if(!K.size)return;
+  Object.keys(QI).forEach(id=>{const q=QI[id];if(K.has(q&&q.m)||K.has(String(id).split('.')[0]))delete QI[id]});
+  /* fenêtre « Nouvelle version » : pas d'annonce des cours de l'autre groupe */
+  try{const R=window.__REL;if(R&&Array.isArray(R.hist))R.hist.forEach(h=>{if(Array.isArray(h.notes))h.notes=h.notes.filter(n=>!(n&&n.m&&K.has(n.m)))})}catch(e){}}
+ /* rubrique d'accueil des cours auxiliaires */
+ const _gr=groups;groups=function(){let G=_gr.apply(this,arguments);const ids=MAT.filter(m=>estAuxMat(m)&&!m.cloison).map(m=>m.id);
+  /* les cours de l'autre groupe disparaissent des rubriques ; rubriques vides retirées */
+  const D=deux();G.forEach(g=>{g.subs.forEach(s=>{s.mats=s.mats.filter(id=>!ids.includes(id)&&!(MATI[id]&&MATI[id].cloison))});if(!D)g.subs=g.subs.filter(s=>s.mats.length)});
+  if(!D)G=G.filter(g=>g.subs.length);else G=G.filter(g=>g.id!=='_autres'||g.subs.some(s=>s.mats.length));
+  if(ids.length){let g=G.find(x=>x.id==='aux');if(!g){g={id:'aux',n:Tx('aux.grp','AUXILIAIRES DE SANTÉ'),e:'🩹',col:'#0E7490',subs:[]};G.unshift(g)}
+   g.subs=[{id:'aux-annales',n:Tx('aux.sub','Diplôme d’État blanc 2024-2025'),mats:ids}]}
+  return G};
+ /* changement de filière : pas de passage seul d'un groupe à l'autre */
+ const _pf=pickFil;pickFil=function(f){
+  if(!deux()&&S&&S.onb&&S.fil&&groupeFil(S.fil)!==groupeFil(f)){toast(Tx('aux.lock','Ta filière ne peut pas être changée ici. Pour changer de filière, contacte l’administrateur.'));return}
+  const r=_pf.apply(this,arguments);try{recalc()}catch(e){}return r};
+ window.pickFil=pickFil;
+ /* comptes « deux filières » (tableau de bord / SQL : public.access → deuxFilieres) */
+ async function sha(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
+ async function verifier(){try{if(typeof RIC==='undefined'||!RIC.url||!navigator.onLine)return;const em=String((RIC.session&&RIC.session.email)||'').trim().toLowerCase();
+   let ok=false;if(em){const r=await fetch(RIC.url+'/rest/v1/app_settings?select=valeur&cle=eq.public.access',{headers:{apikey:RIC.key},cache:'no-store'});if(!r.ok)return;
+    const j=await r.json();const L=((j[0]&&j[0].valeur&&j[0].valeur.deuxFilieres)||[]).map(x=>String(x).toLowerCase());ok=L.includes(await sha(em))}
+   if(ok!==DEUX){DEUX=ok;try{ok?localStorage.setItem(LK,'1'):localStorage.removeItem(LK)}catch(e){}try{recalc();render()}catch(e){}}}catch(e){}}
+ window.riFiliere.verifier=verifier;
+ setTimeout(verifier,2500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')verifier()});
+})();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
