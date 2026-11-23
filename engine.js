@@ -4425,6 +4425,9 @@ const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2"
      jamais les e-mails en clair. Ces comptes peuvent aussi changer librement de filière pour voir l'appli comme l'élève. */
 (function(){
  const AUX='AUX',LK='ri_deux_fil';
+ /* site test (revision-infas-test) : l'administrateur y change librement de filière pour tester ; le cloisonnement des cours reste.
+    Sur le site élèves, le changement de groupe reste bloqué. */
+ const SITE_TEST=/\/revision-infas-test(\/|$)/.test(location.pathname);
  try{if(typeof DATA0!=='undefined'&&Array.isArray(DATA0.filieres)&&!DATA0.filieres.some(f=>f.id===AUX))DATA0.filieres.push({id:AUX,n:'Auxiliaire de santé',e:'🩹'})}catch(e){}
  const estAuxMat=m=>!!(m&&Array.isArray(m.fil)&&m.fil.includes(AUX));
  const groupeFil=f=>f===AUX?'aux':(f?'std':'');
@@ -4449,7 +4452,7 @@ const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2"
   return G};
  /* changement de filière : pas de passage seul d'un groupe à l'autre */
  const _pf=pickFil;pickFil=function(f){
-  if(!deux()&&S&&S.onb&&S.fil&&groupeFil(S.fil)!==groupeFil(f)){toast(Tx('aux.lock','Ta filière ne peut pas être changée ici. Pour changer de filière, contacte l’administrateur.'));return}
+  if(!deux()&&!SITE_TEST&&S&&S.onb&&S.fil&&groupeFil(S.fil)!==groupeFil(f)){toast(Tx('aux.lock','Ta filière ne peut pas être changée ici. Pour changer de filière, contacte l’administrateur.'));return}
   const r=_pf.apply(this,arguments);try{recalc()}catch(e){}return r};
  window.pickFil=pickFil;
  /* comptes « deux filières » (tableau de bord / SQL : public.access → deuxFilieres) */
