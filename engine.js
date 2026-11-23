@@ -4436,16 +4436,19 @@ const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2"
  window.riFiliere={AUX,estAuxMat,deux:()=>deux(),groupe:()=>groupeFil(S&&S.fil)};
  /* cloisonnement : après chaque calcul du contenu */
  const _ac=applyContent;applyContent=function(){const r=_ac.apply(this,arguments);try{cloison()}catch(e){console.warn('RI filière',e)}return r};
- function cloison(){if(deux()||!S)return;const aux=S.fil===AUX,K=new Set();
+ function cloison(){
+  /* les sujets auxiliaires ne sont pas des cours : jamais dans « Matières » (sauf dans l'éditeur) ; leurs questions restent pour les sujets */
+  if(!(typeof EDITMODE!=='undefined'&&EDITMODE))MAT.forEach(m=>{if(estAuxMat(m)){m.off=true;m.auxSuj=1}});
+  if(deux()||!S)return;const aux=S.fil===AUX,K=new Set();
   MAT.forEach(m=>{const cache=aux?!estAuxMat(m):estAuxMat(m);if(!cache)return;m.off=true;m.cloison=1;K.add(m.id);QBM[m.id]=[]});
   if(!K.size)return;
   Object.keys(QI).forEach(id=>{const q=QI[id];if(K.has(q&&q.m)||K.has(String(id).split('.')[0]))delete QI[id]});
   /* fenêtre « Nouvelle version » : pas d'annonce des cours de l'autre groupe */
   try{const R=window.__REL;if(R&&Array.isArray(R.hist))R.hist.forEach(h=>{if(Array.isArray(h.notes))h.notes=h.notes.filter(n=>!(n&&n.m&&K.has(n.m)))})}catch(e){}}
  /* rubrique d'accueil des cours auxiliaires */
- const _gr=groups;groups=function(){let G=_gr.apply(this,arguments);const ids=MAT.filter(m=>estAuxMat(m)&&!m.cloison).map(m=>m.id);
+ const _gr=groups;groups=function(){let G=_gr.apply(this,arguments);const ids=MAT.filter(m=>estAuxMat(m)&&!m.cloison&&!m.off).map(m=>m.id);
   /* les cours de l'autre groupe disparaissent des rubriques ; rubriques vides retirées */
-  const D=deux();G.forEach(g=>{g.subs.forEach(s=>{s.mats=s.mats.filter(id=>!ids.includes(id)&&!(MATI[id]&&MATI[id].cloison))});if(!D)g.subs=g.subs.filter(s=>s.mats.length)});
+  const D=deux();G.forEach(g=>{g.subs.forEach(s=>{s.mats=s.mats.filter(id=>!ids.includes(id)&&!(MATI[id]&&(MATI[id].cloison||MATI[id].auxSuj)))});if(!D)g.subs=g.subs.filter(s=>s.mats.length)});
   if(!D)G=G.filter(g=>g.subs.length);else G=G.filter(g=>g.id!=='_autres'||g.subs.some(s=>s.mats.length));
   if(ids.length){let g=G.find(x=>x.id==='aux');if(!g){g={id:'aux',n:Tx('aux.grp','AUXILIAIRES DE SANTÉ'),e:'🩹',col:'#0E7490',subs:[]};G.unshift(g)}
    g.subs=[{id:'aux-annales',n:Tx('aux.sub','Diplôme d’État blanc 2024-2025'),mats:ids}]}
@@ -4463,5 +4466,39 @@ const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2"
    if(ok!==DEUX){DEUX=ok;try{ok?localStorage.setItem(LK,'1'):localStorage.removeItem(LK)}catch(e){}try{recalc();render()}catch(e){}}}catch(e){}}
  window.riFiliere.verifier=verifier;
  setTimeout(verifier,2500);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')verifier()});
+
+ /* ---------- ACCUEIL DE L'ÉLÈVE AUXILIAIRE : les sujets d'examen blanc rangés par matière, puis par ville ---------- */
+ const estAux=()=>!!(S&&S.fil===AUX)&&!(typeof EDITMODE!=='undefined'&&EDITMODE);
+ const auxMats=()=>MAT.filter(m=>estAuxMat(m)&&(QBM[m.id]||[]).length);
+ const COUL=['#0F6B5C','#C2410C','#2C3E8F','#9D174D','#8A6A3D','#0E7490','#4D7C0F','#6D28D9'];
+ const villes=m=>(m.ch||[]).map((c,i)=>({i,nom:String(c).split(' · ')[0],n:(QBM[m.id]||[]).filter(q=>q.c===i).length})).filter(v=>v.n);
+ function types(mid,i){const L=(QBM[mid]||[]).filter(q=>q.c===i);const vf=L.filter(q=>q.t==='vf').length,qc=L.length-vf;return[vf?vf+' QCD':'',qc?qc+' QCM':''].filter(Boolean).join(' · ')}
+ function carte(o){return `<button class="auxc" style="--auxc:${esc(o.col)}" onclick="${o.click}"><span class="auxpill">${esc(o.titre)}</span><span class="auxd">${esc(o.desc)}</span><span class="auxfig" aria-hidden="true">${esc(o.emo)}</span></button>`}
+ function cartesMatieres(){const L=auxMats();if(!L.length)return `<div class="empty">${T('de.none2','Bientôt disponibles.')}</div>`;
+  return `<div class="auxst">${L.map((m,k)=>{const V=villes(m);return carte({col:m.col||COUL[k%COUL.length],titre:String(m.title||'').split(' — ')[0],desc:Tx('aux.mdesc','{v} villes · {n} questions corrigées',{v:V.length,n:(QBM[m.id]||[]).length}),emo:m.emo||'📝',click:`go('auxsuj',{id:'${jsq(m.id)}'})`})}).join('')}</div>`}
+ function cartesVilles(mid){const m=MATI[mid];if(!m)return'';const V=villes(m),k0=Math.max(0,COUL.indexOf(m.col));
+  return `<div class="auxst">${V.map((v,k)=>carte({col:COUL[(k0+k)%COUL.length],titre:v.nom,desc:Tx('aux.vdesc','{n} questions · {t}',{n:v.n,t:types(mid,v.i)}),emo:'📍',click:`riAuxSujet('${jsq(mid)}',${v.i})`})).join('')}</div>`}
+ window.riAuxSujet=function(mid,i){const m=MATI[mid];if(!m)return;const ids=(QBM[mid]||[]).filter(q=>q.c===i).map(q=>q.id);
+  if(RIC&&RIC.can&&!RIC.can('matiere:'+mid+'/sujet:'+(i+1))){try{RIC.paywall('matiere:'+mid+'/sujet:'+(i+1),'Sujet Premium')}catch(e){}return}
+  startFil(mid,ids,String(m.ch[i]||'').replace(' · ',' · '))};
+ SCREENS.auxsuj={n:'Sujets auxiliaires (villes)',ctx:1,hdr:()=>{const m=matOf(ctx.id);return miniHeader(T('aux.small','📝 Sujets d’examen blanc'),esc(String(m.title||'').split(' — ')[0]))},blocks:['auxsuj.main']};
+ B('auxsuj.main','Sujets d’une matière auxiliaire, par ville',()=>`<div class="muted small" style="margin:2px 2px 12px">${T('aux.choisir','Choisis la ville : le sujet s’affiche en entier, dans l’ordre du document, avec la correction.')}</div>`+cartesVilles(ctx.id));
+ const remplace=(id,f)=>{const b=BLK[id];if(!b)return;const h=b.html,o=b.oneui;b.html=function(){return estAux()?f():h.apply(this,arguments)};if(o)b.oneui=function(){return estAux()?f():o.apply(this,arguments)}};
+ const deAux=()=>`<div class="card sf dec"><h3>${T('de.h','🎓 Sujets préparation D.E')}</h3><div class="muted small">${T('de.sub','Sujets d’examen blanc et d’examen, pour t’entraîner dans les conditions du D.E.')}</div>
+  <div class="lbl3">${T('de.ex','🏛️ Sujets d’examen (D.E)')}</div>${cartesMatieres()}</div>`;
+ const bientot=()=>`<div class="secT">${T('home.mat','Matières')}<span class="ln"></span></div><div class="card sf auxsoon"><div class="auxsoonh">🩹 ${T('aux.grp','AUXILIAIRES DE SANTÉ')}</div><div class="empty">${T('aux.soon','Bientôt disponible.')}</div></div>`;
+ remplace('home.de',deAux);
+ ['home.sujexam','home.sujets','home.formules','matieres.more'].forEach(id=>remplace(id,()=>''));
+ remplace('home.mat',bientot);remplace('matieres.list',()=>bientot().replace(/^<div class="secT">[\s\S]*?<\/div>/,''));
+ const st=document.createElement('style');st.textContent=`
+ .auxst{display:flex;flex-direction:column;margin-top:10px}
+ .auxc{position:relative;display:block;width:100%;text-align:left;border:0;font:inherit;color:#fff;background:var(--auxc);border-radius:22px;padding:16px 18px 34px;min-height:118px;overflow:hidden;cursor:pointer;margin-top:-26px;box-shadow:0 -6px 14px rgba(0,0,0,.13);border-top:2px solid color-mix(in srgb,var(--auxc) 70%,#fff)}
+ .auxc:first-child{margin-top:0}.auxc:last-child{padding-bottom:18px}
+ .auxc:active{filter:brightness(1.06)}
+ .auxpill{display:inline-block;background:color-mix(in srgb,var(--auxc) 62%,#fff);color:#fff;font-weight:800;font-size:17px;line-height:1.2;padding:6px 14px;border-radius:13px;max-width:62%}
+ .auxd{display:block;margin-top:10px;font-size:13.5px;line-height:1.35;opacity:.95;max-width:60%}
+ .auxfig{position:absolute;right:14px;top:14px;width:96px;height:96px;display:flex;align-items:center;justify-content:center;font-size:50px;background:color-mix(in srgb,var(--auxc) 55%,#fff);border-radius:46% 54% 40% 60%/58% 42% 58% 42%;transform:rotate(-8deg)}
+ .auxsoon{text-align:center}.auxsoonh{font-weight:800;font-size:17px;color:var(--h2,#17594C);letter-spacing:.3px}`;
+ document.head.appendChild(st);
 })();
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();

@@ -1,34 +1,10 @@
 {
- "v": "4b348ee4b2",
+ "v": "2e310dae21",
  "date": "2026-11-23",
- "sig": "4636bce57dae247b2c215d1b254d3c481edd445a",
+ "sig": "616825c50ce18f4f489eb246c0f1cdf59b6b62d7",
  "notes": [
   {
    "t": "Nouvelle mise à jour de l'appli"
-  },
-  {
-   "t": "📘 Nouveau cours : Soins infirmiers en chirurgie — Auxiliaires de santé",
-   "m": "xauxchir"
-  },
-  {
-   "t": "📘 Nouveau cours : Gynéco-obstétrique — Auxiliaires de santé",
-   "m": "xauxgyn"
-  },
-  {
-   "t": "📘 Nouveau cours : Soins infirmiers en médecine — Auxiliaires de santé",
-   "m": "xauxmed"
-  },
-  {
-   "t": "📘 Nouveau cours : Pédiatrie — Auxiliaires de santé",
-   "m": "xauxped"
-  },
-  {
-   "t": "📘 Nouveau cours : Santé publique — Auxiliaires de santé",
-   "m": "xauxsp"
-  },
-  {
-   "t": "📘 Nouveau cours : Santé de la reproduction / PF — Auxiliaires de santé",
-   "m": "xauxsrpf"
   }
  ],
  "mats": {
@@ -120,30 +96,6 @@
    "t": "Ophtalmologie",
    "h": "864477f569d744990ba9ccbbd3a43fd64a031847"
   },
-  "xauxchir": {
-   "t": "Soins infirmiers en chirurgie — Auxiliaires de santé",
-   "h": "228b6fb6026186ac8586f61cdb81ff349ab6661f"
-  },
-  "xauxgyn": {
-   "t": "Gynéco-obstétrique — Auxiliaires de santé",
-   "h": "62dc4eb84485d34ca8f8d5691f93708120edf1ab"
-  },
-  "xauxmed": {
-   "t": "Soins infirmiers en médecine — Auxiliaires de santé",
-   "h": "38783777222c8019106ef6ec63e0f7ae4ef35913"
-  },
-  "xauxped": {
-   "t": "Pédiatrie — Auxiliaires de santé",
-   "h": "30b629e5dc20b8cdc19bcb773a93918ad125d3c9"
-  },
-  "xauxsp": {
-   "t": "Santé publique — Auxiliaires de santé",
-   "h": "ae4e9054a4136a4ce83a310001c9abac5bdaf340"
-  },
-  "xauxsrpf": {
-   "t": "Santé de la reproduction / PF — Auxiliaires de santé",
-   "h": "a7ff1cee77fe417fe4da0005314c1b1ca8c69372"
-  },
   "xmedann": {
    "t": "Médecine — Annales corrigées L3 IDE",
    "h": "da1668a3cde14d3203d0ee651fa460c299e649de"
@@ -159,35 +111,11 @@
  },
  "hist": [
   {
-   "v": "4b348ee4b2",
+   "v": "2e310dae21",
    "date": "2026-11-23",
    "notes": [
     {
      "t": "Nouvelle mise à jour de l'appli"
-    },
-    {
-     "t": "📘 Nouveau cours : Soins infirmiers en chirurgie — Auxiliaires de santé",
-     "m": "xauxchir"
-    },
-    {
-     "t": "📘 Nouveau cours : Gynéco-obstétrique — Auxiliaires de santé",
-     "m": "xauxgyn"
-    },
-    {
-     "t": "📘 Nouveau cours : Soins infirmiers en médecine — Auxiliaires de santé",
-     "m": "xauxmed"
-    },
-    {
-     "t": "📘 Nouveau cours : Pédiatrie — Auxiliaires de santé",
-     "m": "xauxped"
-    },
-    {
-     "t": "📘 Nouveau cours : Santé publique — Auxiliaires de santé",
-     "m": "xauxsp"
-    },
-    {
-     "t": "📘 Nouveau cours : Santé de la reproduction / PF — Auxiliaires de santé",
-     "m": "xauxsrpf"
     }
    ]
   },
