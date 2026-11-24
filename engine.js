@@ -382,7 +382,7 @@ B('home.mat','Matières par groupe',()=>{const mine=new Set(myMats().map(m=>m.id
  const open=S.gOpen||{};
  return `<div class="secT">${T('home.mat','Matières')}<span class="ln"></span></div>`+G.map((g,gi)=>`<details class="grp sf" style="--gc:${esc(g.col||'var(--coral)')}" data-g="${esc(g.id)}" ${open[g.id]===false?'':'open'}><summary><span class="ge">${esc(g.e||'📁')}</span><b>${esc(g.n)}</b><small>${g.subs.reduce((a,s)=>a+s.mats.length,0)} ${esc(Tx('grp.n','cours'))}</small></summary>${(()=>{const solo=g.subs.filter(s=>s.mats.length===1),multi=g.subs.filter(s=>s.mats.length>1);
   return (solo.length?grid('g.'+g.id,solo.map(s=>{const t=matTile(MATI[s.mats[0]]);if(s.n&&nrm(s.n)!==nrm(MATI[s.mats[0]].short))t.n=esc(s.n)+' · '+t.n;return t})):'')+multi.map(s=>`<div class="sgrp">${esc(s.n)}</div>${grid('g.'+g.id+'.'+s.id,s.mats.map(id=>matTile(MATI[id])))}`).join('')})()}</details>`).join('')
- +(otherMats().length?`<button class="btn light" style="margin-top:4px" onclick="CAHIER=S.extra.slice();go('autres')">${T('home.mat.add','➕ Autres cours (cahier des cours)')}</button>`:'')},{grid:1,after:r=>$$('details.grp',r).forEach(d=>d.addEventListener('toggle',()=>{S.gOpen=S.gOpen||{};S.gOpen[d.dataset.g]=d.open;save()}))});
+ +(otherMats().length?`<button class="btn light" style="margin-top:4px" onclick="CAHIER=S.extra.slice();go('autres')">${T('home.mat.add','➕ Autres cours (cahier des cours)')}</button>`:'')},{grid:1,after:r=>$$('details.grp',r).forEach(d=>d.addEventListener('toggle',()=>{const g=d.dataset.g,avant=!(S.gOpen&&S.gOpen[g]===false);if(avant===d.open)return;/* ouverture à l'affichage : rien n'est enregistré */S.gOpen=S.gOpen||{};S.gOpen[g]=d.open;save()}))});
 function openMat(id){S.lastMat=id;save();go('matiere',{id})}
 B('home.fav','Cours mis en favoris',()=>{const L=myMats().filter(m=>S.fav[m.id]);return `<div class="card sf"><h3>${T('home.fav','⭐ Liste des cours mis en favoris')}</h3>${L.length?L.map(m=>`<div class="li" onclick="openMat('${jsq(m.id)}')"><span class="em">${esc(m.emo)}</span><span class="tx"><b>${esc(m.title)}</b><small>${mStat(m.id).pct}% ${Tx('ui.mastered','maîtrisé')}</small></span><span class="go">›</span></div>`).join(''):`<div class="empty">${T('home.fav.empty','Touche ☆ dans une matière pour l’ajouter ici.')}</div>`}</div>`});
 B('home.diff','Notions difficiles à revoir',()=>{const L=myMats().map(m=>({m,n:diffIds(m.id).length})).filter(x=>x.n);const tot=L.reduce((a,x)=>a+x.n,0);
@@ -813,10 +813,10 @@ function musicHTML(ou){const L=musicList();if(!L.length)return EDITMODE?`<div cl
 B('home.music','Cours en musique',()=>musicHTML(0));BLK['home.music'].oneui=()=>musicHTML(1);
 
 /* ---------- 4. SERVICE CLIENT & COMMUNAUTÉ (liens saisis dans l'éditeur) ---------- */
-const COMMU=[['wa_chan','📢','Intégrer la chaîne WhatsApp','Nouveautés et annonces','#128C7E'],['wa_g1','💬','Intégrer le groupe WhatsApp','Entraide entre étudiants','#25D366'],['wa_g2','💬','Intégrer le 2e groupe WhatsApp','Entraide entre étudiants','#25D366'],['tg','✈️','Intégrer le groupe Telegram','Documents et discussions','#229ED9'],['admin','✉️','Écrire à l’administrateur de l’application','Poser une question, signaler un problème','#E8772E']];
+const COMMU=[['wa_chan','📢','Intégrer la chaîne WhatsApp','Nouveautés et annonces','#128C7E'],['wa_g1','💬','Intégrer le groupe WhatsApp','Entraide entre étudiants','#25D366'],['wa_g2','💬','Intégrer le 2e groupe WhatsApp','Entraide entre étudiants','#25D366'],['tg','✈️','Intégrer le groupe Telegram','Documents et discussions','#229ED9'],['wa_aux','🩹','Intégrer le groupe des auxiliaires','Entraide entre auxiliaires','#0E7490'],['admin','✉️','Écrire à l’administrateur de l’application','Poser une question, signaler un problème','#E8772E']];
 const linkOk=u=>/^(https:\/\/|mailto:|tel:)/i.test(u||'');
 function commuHTML(ou,big){const c=(E.content&&E.content.commu)||{};const H=big?T('cm.big','🤝 REJOINS LA COMMUNAUTÉ'):T('cm.h','🤝 Service client & communauté');
- const L=COMMU.filter(x=>x[0]!=='wa_g2'||linkOk(c.wa_g2));
+ const L=COMMU.filter(x=>(x[0]!=='wa_g2'&&x[0]!=='wa_aux')||linkOk(c[x[0]]));
  const soon=Tx('cm.soon','Bientôt disponible');
  const btns=L.map(([k,e,n,s,col])=>linkOk(c[k])?`<a class="cmb" href="${esc(c[k])}" ${/^https/i.test(c[k])?'target="_blank" rel="noopener"':''} style="--cc:${col}"><span class="ce">${e}</span><span class="ct"><b>${esc(c[k+'_n']||n)}</b><small>${esc(s)}</small></span><span class="go">›</span></a>`
   :`<button class="cmb cmsoon" style="--cc:${col}" onclick="toast('${jsq(soon+' ⏳')}')"><span class="ce">${e}</span><span class="ct"><b>${esc(n)}</b><small>⏳ ${esc(soon)}</small></span></button>`).join('');
@@ -1261,7 +1261,7 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
   window.addEventListener('resize', placeFab);
   // bouton visible seulement quand l'écran du quiz est affiché
   const CFG = window.CALC_CONFIG || {};
-  const quizOn = () => {
+  const quizOn = () => { if (typeof S!=='undefined'&&S&&S.fil==='AUX') return false;   /* auxiliaires : pas de calculatrice */
     if (CFG.always) return true;
     const q = document.querySelector(CFG.quizSelector || '#screen-quiz');
     return !!(q && !q.classList.contains('hidden') && q.getClientRects().length);
@@ -1331,7 +1331,7 @@ try{if(!localStorage.getItem('infas_calc_fab_v1'))localStorage.setItem('infas_ca
   window.addEventListener('resize', () => { placeFab(); if (!ov.classList.contains('hidden')) placer() });
   const CH = /\bchirurgie\b/i, vu = el => !!(el && !el.classList.contains('hidden') && el.getClientRects().length);
   const chirQ = id => { try { const q = QI[id]; if (!q) return false; const m = (MAT || []).find(x => x.id === q.m) || {}; return CH.test((m.title || '') + ' ' + (m.short || '') + ' ' + ((m.ch && q.c >= 0 && m.ch[q.c]) || '')) } catch (e) { return false } };
-  const chirNow = () => { try {
+  const chirNow = () => { if (typeof S!=='undefined'&&S&&S.fil==='AUX') return false; try {   /* auxiliaires : pas de table de Lund-Browder */
     if (VIEW === 'appview') { const m = (MAT || []).find(x => x.id === ctx.id) || {}; if (CH.test((m.title || '') + ' ' + (m.short || '')) && !/correction|examens?\s+blancs?/i.test(m.title || '')) return true;
       const f = document.querySelector('#appKeep.on') || document.querySelector('#appFrame:not(.hide)'); const d = f && f.contentDocument; if (!d) return false;
       if (!vu(d.getElementById('screen-quiz'))) return false; const e = d.getElementById('q-eyebrow'); return !!(e && CH.test(e.textContent)) }
@@ -1833,7 +1833,7 @@ const _glossDraw0=glossDraw;glossDraw=function(){_glossDraw0.apply(this,argument
  if(mid&&!$('#glAdd'))o.insertAdjacentHTML('afterbegin',`<button class="btn coral" id="glAdd" onclick="riGlAdd('${jsq(mid)}')">＋ ${esc(Tx('ed.gadd2','Ajouter un terme'))}</button>`);
  if(mid)$$('.gli',o).forEach(el=>{if(el.querySelector('.riedbtn'))return;const t=el.querySelector('b').textContent;const b=document.createElement('button');b.className='riedbtn';b.textContent='✏️';b.onclick=()=>riGlEdit(mid,t);el.appendChild(b)})};
 /* compte à rebours avant le D.E (date réglée dans l'éditeur) */
-B('home.countdown','Compte à rebours D.E',()=>{const c=(E.content||{}).countdown||{};const ed=edOn();if(!c.d&&!ed)return'';
+B('home.countdown','Compte à rebours D.E',()=>{const ed=edOn(),aux=(typeof S!=='undefined'&&S&&S.fil==='AUX')&&!ed;const c=aux?((RIC.cfg&&RIC.cfg.countdownAux)||{}):((E.content||{}).countdown||{});if(!c.d&&(!ed||aux))return'';   /* auxiliaires : date du tableau de bord › Auxiliaires */
  if(!c.d)return `<div class="card sf cdwn"><b>⏳ ${esc(Tx('cd.none','Compte à rebours D.E'))}</b><button class="btn light" onclick="riCdEdit()">${esc(Tx('cd.set','Choisir la date de l’examen'))}</button></div>`;
  const d=new Date(c.d+'T08:00:00'),n=Math.ceil((d-Date.now())/864e5);const ds=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
  return `<div class="card sf cdwn"><div class="cdn">${n>0?'J-'+n:n===0?Tx('cd.today','C’est aujourd’hui !'):'✅'}</div><div><b>${esc(c.t||Tx('cd.t','Avant le D.E'))}</b><small>📅 ${esc(ds)}</small></div>${ed?`<button class="riedbtn" onclick="riCdEdit()">✏️</button>`:''}</div>`});
@@ -2473,9 +2473,9 @@ const RIC={
    const sv=k=>{const x=sets.find(r=>r.cle===k);return(x&&x.valeur)||{}};const pa=sv('public.access'),pay=sv('public.paiement');
    const old=JSON.stringify(RIC.cfg.regles)+RIC.cfg.defaut+JSON.stringify(RIC.cfg.annonces)+JSON.stringify(RIC.cfg.questions||{})+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null)+JSON.stringify(RIC.cfg.contact||null);
    let google=false;try{const r=await fetch(RIC.url+'/auth/v1/settings',{headers:H(),cache:'no-store'});if(r.ok){const j=await r.json();google=!!(j.external&&j.external.google)}}catch(e){}
-   RIC.cfg={regles,defaut:pa.defaut==='premium'?'premium':'gratuit',version:pa.version||0,questions:(pa.questions&&typeof pa.questions==='object')?pa.questions:{},plusapp:(pa.plusapp&&typeof pa.plusapp==='object')?pa.plusapp:{},plans,annonces:ann,google,paiement:pay,promo:(pa.promo&&typeof pa.promo==='object')?pa.promo:null,fincorr:(pa.fincorr&&typeof pa.fincorr==='object')?pa.fincorr:{},nosig:(pa.nosig&&typeof pa.nosig==='object')?pa.nosig:{},offres:(pa.offres&&typeof pa.offres==='object')?pa.offres:null,contact:(pa.contact&&typeof pa.contact==='object')?pa.contact:null,t:Date.now()};
+   RIC.cfg={regles,defaut:pa.defaut==='premium'?'premium':'gratuit',version:pa.version||0,questions:(pa.questions&&typeof pa.questions==='object')?pa.questions:{},plusapp:(pa.plusapp&&typeof pa.plusapp==='object')?pa.plusapp:{},plans,annonces:ann,google,paiement:pay,promo:(pa.promo&&typeof pa.promo==='object')?pa.promo:null,fincorr:(pa.fincorr&&typeof pa.fincorr==='object')?pa.fincorr:{},nosig:(pa.nosig&&typeof pa.nosig==='object')?pa.nosig:{},offres:(pa.offres&&typeof pa.offres==='object')?pa.offres:null,contact:(pa.contact&&typeof pa.contact==='object')?pa.contact:null,countdownAux:(pa.countdownAux&&typeof pa.countdownAux==='object'&&/^\d{4}-\d\d-\d\d$/.test(pa.countdownAux.d||''))?pa.countdownAux:null,t:Date.now()};
    LS.set(RIC.CK,RIC.cfg);RIC.ready=true;
-   if(old!==JSON.stringify(regles)+RIC.cfg.defaut+JSON.stringify(ann)+JSON.stringify(RIC.cfg.questions)+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null)+JSON.stringify(RIC.cfg.contact||null)&&typeof render==='function'&&!EDITMODE&&!quiet)render();
+   if(old!==JSON.stringify(regles)+RIC.cfg.defaut+JSON.stringify(ann)+JSON.stringify(RIC.cfg.questions)+JSON.stringify(RIC.cfg.promo||null)+JSON.stringify(RIC.cfg.offres||null)+JSON.stringify(RIC.cfg.contact||null)+JSON.stringify(RIC.cfg.countdownAux||null)&&typeof render==='function'&&!EDITMODE&&!quiet)render();
   }catch(e){console.warn('RI cloud : règles non mises à jour',e)}
   RIC.busy=false;flush()}
  RIC.refresh=refresh;
@@ -4425,14 +4425,11 @@ const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2"
      jamais les e-mails en clair. Ces comptes peuvent aussi changer librement de filière pour voir l'appli comme l'élève. */
 (function(){
  const AUX='AUX',LK='ri_deux_fil';
- /* site test (revision-infas-test) : l'administrateur y change librement de filière pour tester ; le cloisonnement des cours reste.
-    Sur le site élèves, le changement de groupe reste bloqué. */
- const SITE_TEST=/\/revision-infas-test(\/|$)/.test(location.pathname);
  try{if(typeof DATA0!=='undefined'&&Array.isArray(DATA0.filieres)&&!DATA0.filieres.some(f=>f.id===AUX))DATA0.filieres.push({id:AUX,n:'Auxiliaire de santé',e:'🩹'})}catch(e){}
  const estAuxMat=m=>!!(m&&Array.isArray(m.fil)&&m.fil.includes(AUX));
  const groupeFil=f=>f===AUX?'aux':(f?'std':'');
  let DEUX=false;try{DEUX=localStorage.getItem(LK)==='1'}catch(e){}
- function deux(){try{if(typeof EDITMODE!=='undefined'&&EDITMODE)return true;if(typeof RO!=='undefined'&&RO===false)return true}catch(e){}return DEUX}
+ function deux(){try{if(typeof EDITMODE!=='undefined'&&EDITMODE)return true;if(/[?&]lecture=1\b/.test(location.search))return true;if(typeof RO!=='undefined'&&RO===false)return true}catch(e){}return DEUX}
  window.riFiliere={AUX,estAuxMat,deux:()=>deux(),groupe:()=>groupeFil(S&&S.fil)};
  /* cloisonnement : après chaque calcul du contenu */
  const _ac=applyContent;applyContent=function(){const r=_ac.apply(this,arguments);try{cloison()}catch(e){console.warn('RI filière',e)}return r};
@@ -4450,12 +4447,12 @@ const RI_IMG_MASQUEES={xmvkq5cba:["xxmvkq5cba_0", "xxmvkq5cba_1", "xxmvkq5cba_2"
   /* les cours de l'autre groupe disparaissent des rubriques ; rubriques vides retirées */
   const D=deux();G.forEach(g=>{g.subs.forEach(s=>{s.mats=s.mats.filter(id=>!ids.includes(id)&&!(MATI[id]&&(MATI[id].cloison||MATI[id].auxSuj)))});if(!D)g.subs=g.subs.filter(s=>s.mats.length)});
   if(!D)G=G.filter(g=>g.subs.length);else G=G.filter(g=>g.id!=='_autres'||g.subs.some(s=>s.mats.length));
-  if(ids.length){let g=G.find(x=>x.id==='aux');if(!g){g={id:'aux',n:Tx('aux.grp','AUXILIAIRES DE SANTÉ'),e:'🩹',col:'#0E7490',subs:[]};G.unshift(g)}
+  if(ids.length){let g=G.find(x=>x.id==='aux');if(!g){g={id:'aux',n:Tx('aux.grp','AUXILIAIRES DE SANTÉ'),e:'🩹',col:'#0E7490',subs:[]};if(D)G.push(g);else G.unshift(g)}   /* Studio (deux filières) : à la fin, les autres rubriques gardent leur place */
    g.subs=[{id:'aux-annales',n:Tx('aux.sub','Diplôme d’État blanc 2024-2025'),mats:ids}]}
   return G};
  /* changement de filière : pas de passage seul d'un groupe à l'autre */
  const _pf=pickFil;pickFil=function(f){
-  if(!deux()&&!SITE_TEST&&S&&S.onb&&S.fil&&groupeFil(S.fil)!==groupeFil(f)){toast(Tx('aux.lock','Ta filière ne peut pas être changée ici. Pour changer de filière, contacte l’administrateur.'));return}
+  /* 23/11/2026 : l'élève peut changer de filière (IDE / SF ↔ Auxiliaire) ; le contenu suit toujours sa filière (cloisonnement) */
   const r=_pf.apply(this,arguments);try{recalc()}catch(e){}return r};
  window.pickFil=pickFil;
  /* comptes « deux filières » (tableau de bord / SQL : public.access → deuxFilieres) */

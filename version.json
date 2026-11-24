@@ -1,7 +1,7 @@
 {
- "v": "2e310dae21",
- "date": "2026-11-23",
- "sig": "616825c50ce18f4f489eb246c0f1cdf59b6b62d7",
+ "v": "062ddac6c6",
+ "date": "2026-11-24",
+ "sig": "971695871c2471a03e243a8951432c1185b22cd9",
  "notes": [
   {
    "t": "Nouvelle mise à jour de l'appli"
@@ -111,8 +111,8 @@
  },
  "hist": [
   {
-   "v": "2e310dae21",
-   "date": "2026-11-23",
+   "v": "062ddac6c6",
+   "date": "2026-11-24",
    "notes": [
     {
      "t": "Nouvelle mise à jour de l'appli"
@@ -223,5 +223,5 @@
  ],
  "moteur": 2,
  "format": 2,
- "auto": 4
+ "auto": 3
 }
